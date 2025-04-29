@@ -27,6 +27,8 @@ fun HomeScreen(
     val detectedLabels by viewModel.detectedLabels.collectAsState()
 
     val localizedObjects by viewModel.localizedObjects.collectAsState()
+    val openAiItems by viewModel.openAiItems.collectAsState()
+
 
 
     val context = LocalContext.current //-> contentresolver erişimi için lazım
@@ -36,6 +38,10 @@ fun HomeScreen(
     ) { uri: Uri? ->
         viewModel.setSelectedImage(uri)
         viewModel.convertImageToBase64Compressed_2_1(uri, context.contentResolver)
+
+        uri?.let {
+            viewModel.uploadImageToFirebase(it)
+        }
 
         Log.d("Base64Image", "Base64: ${viewModel.selectedImageBase64.value}") //base64 çevrilmiş hali görselin
     }
@@ -79,18 +85,19 @@ fun HomeScreen(
                 Text(text = "Görseldeki Nesneleri Tespit Et (label Detection)")
             }
 
+            Spacer(modifier = Modifier.height(8.dp))
+            Button(
+                onClick = {
+                    viewModel.analyzeWithOpenAi()
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(text = "OpenAI ile Analiz Et")
+            }
+
         }
 
         Spacer(modifier = Modifier.height(16.dp))
-
-        /*
-        LazyColumn {
-            items(localizedObjects) { obj ->
-                Text(text = "${obj.name} (${(obj.score * 100).toInt()}%)")
-                Spacer(modifier = Modifier.height(4.dp))
-            }
-        }
-        */
 
         LazyColumn {
             items(detectedLabels) { label ->
@@ -98,18 +105,15 @@ fun HomeScreen(
                 Spacer(modifier = Modifier.height(4.dp))
             }
         }
+        Spacer(modifier = Modifier.height(16.dp))
 
-
-        /*
+        // OpenAI'dan gelen ürünler listesi
         LazyColumn {
-    items(detectedObjects) { obj ->
-        Text(text = "${obj.name} (${(obj.score * 100).toInt()}%)")
-    }
-}
-
-         */
-
-
+            items(openAiItems) { item ->
+                Text(text = item)
+                Spacer(modifier = Modifier.height(4.dp))
+            }
+        }
     }
 }
 
@@ -126,3 +130,25 @@ fun HomeScreen(
                 Text(text = "Görseldeki Ürünleri Tespit Et")
             }
  */
+
+/*
+                /*
+        LazyColumn {
+    items(detectedObjects) { obj ->
+        Text(text = "${obj.name} (${(obj.score * 100).toInt()}%)")
+    }
+}
+
+         */
+
+
+ */
+
+/*
+LazyColumn {
+    items(localizedObjects) { obj ->
+        Text(text = "${obj.name} (${(obj.score * 100).toInt()}%)")
+        Spacer(modifier = Modifier.height(4.dp))
+    }
+}
+*/

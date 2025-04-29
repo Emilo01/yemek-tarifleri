@@ -5,11 +5,13 @@ import android.content.ContentResolver
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
-import android.util.Base64 // Burayı android.util.Base64 ile değiştirdim
+import android.util.Base64
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.farukayata.yemektarifi.BuildConfig
+import com.farukayata.yemektarifi.data.remote.OpenAiService
+import com.farukayata.yemektarifi.data.remote.StorageRepository
 import com.farukayata.yemektarifi.data.remote.VisionApiService
 import com.farukayata.yemektarifi.data.remote.model.VisionRequest
 import com.farukayata.yemektarifi.data.remote.model.VisionResponse
@@ -17,13 +19,17 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.ByteArrayOutputStream
 import javax.inject.Inject
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
-    private val visionApiService: VisionApiService
+    private val visionApiService: VisionApiService,
 //VisionApiService'ı constructor parametresi olarak aldık
+    private val storageRepository: StorageRepository,
+    private val openAiService: OpenAiService
 ) : ViewModel() {
 
     private val _selectedImageUri = MutableStateFlow<Uri?>(null)
@@ -38,6 +44,12 @@ class HomeViewModel @Inject constructor(
     private val _localizedObjects = MutableStateFlow<List<VisionRequest.LocalizedObjectAnnotation>>(emptyList())
     val localizedObjects: StateFlow<List<VisionRequest.LocalizedObjectAnnotation>> = _localizedObjects
 
+    private val _uploadedImageUrl = MutableStateFlow<String?>(null)
+    val uploadedImageUrl: StateFlow<String?> = _uploadedImageUrl
+
+    private val _openAiItems = MutableStateFlow<List<String>>(emptyList())
+    val openAiItems: StateFlow<List<String>> = _openAiItems
+
 
     fun setSelectedImage(uri: Uri?) {
         _selectedImageUri.value = uri
@@ -51,15 +63,15 @@ class HomeViewModel @Inject constructor(
                 val bitmap = BitmapFactory.decodeStream(inputStream)
                 inputStream?.close()
 
-                // 1. Sıkıştır
+                //Sıkıştır
                 val outputStream = ByteArrayOutputStream()
-                bitmap.compress(Bitmap.CompressFormat.JPEG, 90, outputStream) // %90 kalite çok iyi
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 90, outputStream)
                 val byteArray = outputStream.toByteArray()
 
-                // 2. Gerçek JPEG byte dizisini Base64'e çevir
+                //Gerçek JPEG byte dizisini Base64'e çevir
                 val base64String = Base64.encodeToString(byteArray, Base64.NO_WRAP)
 
-                // 3. Saf Base64'ü ata
+                //Saf Base64'ü ata
                 _selectedImageBase64.value = base64String
 
                 Log.d("VisionRequestCheck", "Yeni Base64 uzunluğu: ${base64String.length}")
@@ -67,6 +79,64 @@ class HomeViewModel @Inject constructor(
             } catch (e: Exception) {
                 e.printStackTrace()
                 Log.e("VisionRequestCheck", "Hata oluştu: ${e.localizedMessage}")
+            }
+        }
+    }
+
+    fun uploadImageToFirebase(uri: Uri) {
+        viewModelScope.launch {
+            try {
+                val url = storageRepository.uploadImageAndGetUrl(uri)
+                _uploadedImageUrl.value = url
+                Log.d("FirebaseUpload", "Download URL: $url")
+            } catch (e: Exception) {
+                Log.e("FirebaseUpload", "Upload failed: ${e.message}")
+            }
+        }
+    }
+
+    fun analyzeWithOpenAi() {
+        viewModelScope.launch {
+            val imageUrl = _uploadedImageUrl.value ?: return@launch
+
+            val json = """
+            {
+              "model": "gpt-4o",
+              "messages": [
+                {
+                  "role": "user",
+                  "content": [
+                    {
+                      "type": "text",
+                      "text": "Bu görseldeki yemek yapımında kullanılabilecek yiyecekleri sadece ad olarak Türkçe listele. Örn: Elma, Muz, Domates"
+                    },
+                    {
+                      "type": "image_url",
+                      "image_url": {
+                        "url": "$imageUrl"
+                      }
+                    }
+                  ]
+                }
+              ],
+              "max_tokens": 500
+            }
+        """.trimIndent()
+
+            val requestBody = json.toRequestBody("application/json".toMediaType())
+
+            try {
+                val response = openAiService.getImageAnalysis(requestBody)
+                val result = response.choices.firstOrNull()?.message?.content
+                val cleaned = result
+                    ?.split(Regex("[\\n,•-]"))
+                    ?.mapNotNull { it.trim().takeIf { it.isNotEmpty() } }
+                    ?: emptyList()
+
+                _openAiItems.value = cleaned
+
+            } catch (e: Exception) {
+                Log.e("OpenAI", "Hata: ${e.localizedMessage}")
             }
         }
     }
@@ -105,50 +175,6 @@ class HomeViewModel @Inject constructor(
                     // Başarılıysa loga yazdıralım
                     response.responses.firstOrNull()?.labelAnnotations?.forEach { label ->
                         Log.d("VisionAPI", "Label: ${label.description} - Score: ${(label.score * 100).toInt()}%")
-                    }
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-                Log.e("VisionAPI", "Hata oluştu: ${e.message}")
-            }
-        }
-    }
-
-    fun detectObjects() {
-        viewModelScope.launch {
-            try {
-                val base64Image = _selectedImageBase64.value
-                if (base64Image.isNotEmpty()) {
-                    val request = VisionRequest(
-                        requests = listOf(
-                            VisionRequest.Request(
-                                image = VisionRequest.Image(content = base64Image),
-                                features = listOf(
-                                    VisionRequest.Feature(
-                                        type = "OBJECT_LOCALIZATION",
-                                        maxResults = 20
-                                    )
-                                )
-                            )
-                        )
-                    )
-
-                    Log.d("VisionRequestCheck", "Gönderilecek Base64 ilk 100 karakter: ${base64Image.take(100)}")
-                    Log.d("VisionRequestCheck", "Base64 uzunluğu: ${base64Image.length}")
-                    Log.d("VisionRequestCheck", "Request içeriği: $request")
-
-                    val response = visionApiService.annotateImage(
-                        apiKey = BuildConfig.VISION_API_KEY,
-                        request = request
-                    )
-
-                    //val objects = response.responses.firstOrNull()?.localizedObjects ?: emptyList()
-                    val objects = response.responses.firstOrNull()?.localizedObjectAnnotations ?: emptyList()
-
-                    _localizedObjects.value = objects
-
-                    objects.forEach {
-                        Log.d("VisionAPI-Object", "Object: ${it.name} - Score: ${(it.score * 100).toInt()}%")
                     }
                 }
             } catch (e: Exception) {
@@ -273,3 +299,51 @@ features = listOf(
     }
 
  */
+
+    /*
+
+    fun detectObjects() {
+        viewModelScope.launch {
+            try {
+                val base64Image = _selectedImageBase64.value
+                if (base64Image.isNotEmpty()) {
+                    val request = VisionRequest(
+                        requests = listOf(
+                            VisionRequest.Request(
+                                image = VisionRequest.Image(content = base64Image),
+                                features = listOf(
+                                    VisionRequest.Feature(
+                                        type = "OBJECT_LOCALIZATION",
+                                        maxResults = 20
+                                    )
+                                )
+                            )
+                        )
+                    )
+
+                    Log.d("VisionRequestCheck", "Gönderilecek Base64 ilk 100 karakter: ${base64Image.take(100)}")
+                    Log.d("VisionRequestCheck", "Base64 uzunluğu: ${base64Image.length}")
+                    Log.d("VisionRequestCheck", "Request içeriği: $request")
+
+                    val response = visionApiService.annotateImage(
+                        apiKey = BuildConfig.VISION_API_KEY,
+                        request = request
+                    )
+
+                    //val objects = response.responses.firstOrNull()?.localizedObjects ?: emptyList()
+                    val objects = response.responses.firstOrNull()?.localizedObjectAnnotations ?: emptyList()
+
+                    _localizedObjects.value = objects
+
+                    objects.forEach {
+                        Log.d("VisionAPI-Object", "Object: ${it.name} - Score: ${(it.score * 100).toInt()}%")
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                Log.e("VisionAPI", "Hata oluştu: ${e.message}")
+            }
+        }
+    }
+
+     */

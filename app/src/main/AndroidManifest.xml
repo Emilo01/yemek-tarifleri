@@ -20,6 +20,10 @@
             android:name="VISION_API_KEY"
             android:value="${VISION_API_KEY}" />
 
+        <meta-data
+            android:name="OPENAI_API_KEY"
+            android:value="${OPENAI_API_KEY}" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true"

@@ -6,6 +6,7 @@ plugins {
     id("dagger.hilt.android.plugin")
 
     id("com.google.android.libraries.mapsplatform.secrets-gradle-plugin")
+    id("com.google.gms.google-services")
 
 }
 
@@ -14,6 +15,7 @@ android {
     compileSdk = 35
 
     val visionApiKey = project.findProperty("VISION_API_KEY") as? String ?: ""
+    val openAiApiKey = project.findProperty("OPENAI_API_KEY") as? String ?: ""
 
     defaultConfig {
         applicationId = "com.farukayata.yemektarifi"
@@ -23,6 +25,8 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        manifestPlaceholders["OPENAI_API_KEY"] = openAiApiKey
+        manifestPlaceholders["VISION_API_KEY"] = visionApiKey
 
         //api keyi değiştik
         //visio_api_key_ erişe bilmek için
@@ -97,5 +101,11 @@ dependencies {
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
+
+    // Firebase
+    implementation("com.google.firebase:firebase-storage-ktx:20.3.0")
+    implementation("com.google.firebase:firebase-common-ktx:20.4.0")
+    implementation(platform("com.google.firebase:firebase-bom:33.13.0"))
+    implementation("com.google.firebase:firebase-analytics")
 
 }
