@@ -53,6 +53,14 @@ class HomeViewModel @Inject constructor(
     private val _categorizedItems = MutableStateFlow<List<CategorizedItem>>(emptyList())
     val categorizedItems: StateFlow<List<CategorizedItem>> = _categorizedItems
 
+    //boş response;
+    private val _userMessage = MutableStateFlow<String?>(null)
+    val userMessage: StateFlow<String?> = _userMessage
+
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading: StateFlow<Boolean> = _isLoading
+
+
 
 
     fun setSelectedImage(uri: Uri?) {
@@ -91,14 +99,18 @@ class HomeViewModel @Inject constructor(
 
     fun analyzeWithOpenAi() {
         viewModelScope.launch(Dispatchers.IO) {
+            _isLoading.value = true
             //Ağ ve Base64 işlemleri ana thread yerine IO thread'de çalışır
             //val imageUrl = _uploadedImageUrl.value ?: return@launch - storrage image kaydetmeyi saldık
             val base64 = _selectedImageBase64.value
 
 
+
             val json = """
             {
               "model": "gpt-4o",
+              "temperature": 0.2,
+               "top_p": 1,
               "messages": [
                 {
                   "role": "user",
@@ -125,6 +137,7 @@ class HomeViewModel @Inject constructor(
             try {
                 val response = openAiService.getImageAnalysis(requestBody)
                 val result = response.choices.firstOrNull()?.message?.content
+                Log.d("OpenAIResult", result ?: "Null")
                 val cleanedItems = result
                     ?.lines()
                     ?.mapNotNull { line ->
@@ -139,6 +152,12 @@ class HomeViewModel @Inject constructor(
                             CategorizedItem(emoji, name, category)
                         } else null
                     } ?: emptyList()
+
+                if (cleanedItems.isEmpty()) {
+                    withContext(Dispatchers.Main) {
+                        _userMessage.value = "Görselde analiz edilebilecek ürün bulunamadı. Lütfen daha net bir fotoğraf yükleyin."
+                    }
+                }
 
                 //_categorizedItems.value = cleanedItems
                 //artık ui güncellemesini main thread de yapıyoruz şu eklenti ile ;Dispatchers.io
@@ -158,8 +177,11 @@ class HomeViewModel @Inject constructor(
 
             } catch (e: Exception) {
                 Log.e("OpenAI", "Hata: ${e.localizedMessage}")
+            } finally {
+                _isLoading.value = false
             }
         }
+
     }
 
 

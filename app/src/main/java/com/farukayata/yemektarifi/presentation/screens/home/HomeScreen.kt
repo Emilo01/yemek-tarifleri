@@ -14,9 +14,21 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.rememberAsyncImagePainter
 import androidx.compose.ui.platform.LocalContext
 import android.util.Log
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Color
+
+import androidx.compose.material3.*
+import androidx.compose.ui.draw.alpha
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.fadeIn
+import androidx.compose.foundation.background
+import com.farukayata.yemektarifi.data.remote.ui.components.CategoryCard
+import com.farukayata.yemektarifi.data.remote.ui.components.LoadingAnimation
 
 @Composable
 fun HomeScreen(
@@ -31,6 +43,8 @@ fun HomeScreen(
     val openAiItems by viewModel.openAiItems.collectAsState()
     val categorizedItems by viewModel.categorizedItems.collectAsState()
 
+    val userMessage by viewModel.userMessage.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
 
 
     val context = LocalContext.current //-> contentresolver erişimi için lazım
@@ -47,10 +61,170 @@ fun HomeScreen(
         }
         */
 
-        Log.d("Base64Image", "Base64: ${viewModel.selectedImageBase64.value}") //base64 çevrilmiş hali görselin
+        Log.d(
+            "Base64Image",
+            "Base64: ${viewModel.selectedImageBase64.value}"
+        ) //base64 çevrilmiş hali görselin
     }
 
-    Column(
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize()
+        ) {
+            Button(
+                onClick = { launcher.launch("image/*") },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(text = "Fotoğraf Seç")
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            selectedImageUri?.let { uri ->
+                Image(
+                    painter = rememberAsyncImagePainter(uri),
+                    contentDescription = "Seçilen Fotoğraf",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(300.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            if (selectedImageBase64.orEmpty().isNotEmpty()) {
+                Button(
+                    onClick = { viewModel.detectLabels() },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(text = "Görseldeki Nesneleri Tespit Et (label Detection)")
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Button(
+                    onClick = { viewModel.analyzeWithOpenAi() },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(text = "OpenAI ile Analiz Et")
+                }
+
+                userMessage?.let { msg ->
+                    Text(
+                        text = msg,
+                        color = Color.Red,
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(vertical = 8.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            LazyColumn {
+                items(detectedLabels) { label ->
+                    Text(text = "${label.description} (${(label.score * 100).toInt()}%)")
+                    Spacer(modifier = Modifier.height(4.dp))
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            val categoryOrder = listOf(
+                "Et ve Et Ürünleri",
+                "Balık ve Deniz Ürünleri",
+                "Yumurta ve Süt Ürünleri",
+                "Tahıllar ve Unlu Mamuller",
+                "Baklagiller",
+                "Sebzeler",
+                "Meyveler",
+                "Baharatlar ve Tat Vericiler",
+                "Yağlar ve Sıvılar",
+                "Konserve ve Hazır Gıdalar",
+                "Tatlı Malzemeleri ve Kuruyemişler"
+            )
+
+            val grouped = categorizedItems.groupBy { it.category }
+            val sortedGroups = categoryOrder.mapNotNull { key -> grouped[key]?.let { key to it } }
+
+
+            //Fade-in animasyon ve loading göstergesi
+            if (isLoading) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    //CircularProgressIndicator() lottie ekledik
+                    LoadingAnimation(
+                        modifier = Modifier.size(150.dp)
+                    )
+                }
+            } else {
+                AnimatedVisibility(
+                    visible = categorizedItems.isNotEmpty(),
+                    enter = fadeIn(animationSpec = tween(500))
+                ) {
+                    LazyColumn {
+                        sortedGroups.forEach { (category, items) ->
+                            item {
+                                CategoryCard(
+                                    categoryName = category,
+                                    items = items
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+//HomeScreen doğrudan ViewModelden selectedImageUriı gözlemlicek
+//launcher ile fotoğraf seçince direkt viewModel.setSelectedImage(uri) dicez
+
+/*
+    Button(
+                onClick = {
+                    viewModel.detectLabels()
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(text = "Görseldeki Ürünleri Tespit Et")
+            }
+ */
+
+/*
+                /*
+        LazyColumn {
+    items(detectedObjects) { obj ->
+        Text(text = "${obj.name} (${(obj.score * 100).toInt()}%)")
+    }
+}
+
+         */
+
+
+ */
+
+/*
+LazyColumn {
+    items(localizedObjects) { obj ->
+        Text(text = "${obj.name} (${(obj.score * 100).toInt()}%)")
+        Spacer(modifier = Modifier.height(4.dp))
+    }
+}
+*/
+
+        /*-> columnn u box yaptık
+            Column(
         modifier = modifier
             .fillMaxSize()
             .padding(16.dp)
@@ -99,6 +273,16 @@ fun HomeScreen(
                 Text(text = "OpenAI ile Analiz Et")
             }
 
+            userMessage?.let { msg ->
+                Text(
+                    text = msg,
+                    color = Color.Red,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(vertical = 8.dp)
+                )
+            }
+
+
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -133,6 +317,24 @@ fun HomeScreen(
         LazyColumn {
             sortedGroups.forEach { (category, items) ->
                 item {
+                    CategoryCard(
+                        categoryName = category,
+                        items = items
+                    )
+                }
+            }
+        }
+
+
+        /*-> aşağıdaki compose yapısı ile uyumlu olcak yeni bir listeleme metodu yyazdık
+        val grouped = categorizedItems.groupBy { it.category }
+        val sortedGroups = categoryOrder.mapNotNull { key ->
+            grouped[key]?.let { key to it }
+        }
+
+        LazyColumn {
+            sortedGroups.forEach { (category, items) ->
+                item {
                     Text(
                         text = category,
                         style = MaterialTheme.typography.titleMedium,
@@ -145,50 +347,24 @@ fun HomeScreen(
             }
         }
 
-        /*
-        // OpenAI'dan gelen ürünler listesi-eski ve katagorisiz
-        LazyColumn {
-            items(openAiItems) { item ->
-                Text(text = item)
-                Spacer(modifier = Modifier.height(4.dp))
-            }
-        }
-        */
-    }
-}
-
-//HomeScreen doğrudan ViewModelden selectedImageUriı gözlemlicek
-//launcher ile fotoğraf seçince direkt viewModel.setSelectedImage(uri) dicez
-
-/*
-    Button(
-                onClick = {
-                    viewModel.detectLabels()
-                },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(text = "Görseldeki Ürünleri Tespit Et")
-            }
- */
-
-/*
-                /*
-        LazyColumn {
-    items(detectedObjects) { obj ->
-        Text(text = "${obj.name} (${(obj.score * 100).toInt()}%)")
+         */
     }
 }
 
          */
 
 
- */
+        /*--bu kısım yerine yukarıda fade in kullandık ve loaing i onu içinne aldık ve tam sayfa yerine sadece liste ekranı gelen yerde listeleme ola kısımda loadig bar dönüyor
+        if (isLoading) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.4f)),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(color = Color.White)
+            }
+        }
 
-/*
-LazyColumn {
-    items(localizedObjects) { obj ->
-        Text(text = "${obj.name} (${(obj.score * 100).toInt()}%)")
-        Spacer(modifier = Modifier.height(4.dp))
-    }
-}
-*/
+         */
+         */

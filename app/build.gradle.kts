@@ -108,4 +108,9 @@ dependencies {
     implementation(platform("com.google.firebase:firebase-bom:33.13.0"))
     implementation("com.google.firebase:firebase-analytics")
 
+    //ikons
+    implementation("androidx.compose.material:material-icons-extended")
+
+    //lottie
+    implementation("com.airbnb.android:lottie-compose:6.0.0")
 }
