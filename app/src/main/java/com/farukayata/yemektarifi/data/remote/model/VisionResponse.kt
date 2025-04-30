@@ -12,7 +12,7 @@ data class VisionResponse(
         val labelAnnotations: List<LabelAnnotation>? = null,
 
         @SerializedName("localizedObjectAnnotations")
-        val localizedObjectAnnotations: List<VisionRequest.LocalizedObjectAnnotation>? = null // 🔥 bunu ekle!
+        val localizedObjectAnnotations: List<VisionRequest.LocalizedObjectAnnotation>? = null
     )
 
     data class LabelAnnotation(

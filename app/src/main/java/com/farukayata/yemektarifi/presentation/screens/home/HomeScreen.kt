@@ -39,9 +39,11 @@ fun HomeScreen(
         viewModel.setSelectedImage(uri)
         viewModel.convertImageToBase64Compressed_2_1(uri, context.contentResolver)
 
+        /*-vision dan 4o ya geçince storrage yüklene fotoyu kaydetmeye gerrek kalmadı
         uri?.let {
             viewModel.uploadImageToFirebase(it)
         }
+        */
 
         Log.d("Base64Image", "Base64: ${viewModel.selectedImageBase64.value}") //base64 çevrilmiş hali görselin
     }

@@ -44,9 +44,6 @@ class HomeViewModel @Inject constructor(
     private val _localizedObjects = MutableStateFlow<List<VisionRequest.LocalizedObjectAnnotation>>(emptyList())
     val localizedObjects: StateFlow<List<VisionRequest.LocalizedObjectAnnotation>> = _localizedObjects
 
-    private val _uploadedImageUrl = MutableStateFlow<String?>(null)
-    val uploadedImageUrl: StateFlow<String?> = _uploadedImageUrl
-
     private val _openAiItems = MutableStateFlow<List<String>>(emptyList())
     val openAiItems: StateFlow<List<String>> = _openAiItems
 
@@ -83,21 +80,13 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    fun uploadImageToFirebase(uri: Uri) {
-        viewModelScope.launch {
-            try {
-                val url = storageRepository.uploadImageAndGetUrl(uri)
-                _uploadedImageUrl.value = url
-                Log.d("FirebaseUpload", "Download URL: $url")
-            } catch (e: Exception) {
-                Log.e("FirebaseUpload", "Upload failed: ${e.message}")
-            }
-        }
-    }
+
 
     fun analyzeWithOpenAi() {
         viewModelScope.launch {
-            val imageUrl = _uploadedImageUrl.value ?: return@launch
+            //val imageUrl = _uploadedImageUrl.value ?: return@launch - storrage image kaydetmeyi saldık
+            val base64 = _selectedImageBase64.value
+
 
             val json = """
             {
@@ -108,12 +97,12 @@ class HomeViewModel @Inject constructor(
                   "content": [
                     {
                       "type": "text",
-                      "text": "Bu görseldeki yemek yapımında kullanılabilecek yiyecekleri sadece ad olarak Türkçe listele. Örn: Elma, Muz, Domates"
+                      "text": "Aşağıdaki görselde yemek yapımında kullanılabilecek bazı gıdalar olabilir. Lütfen yalnızca yenilebilir ve yemeklerin içinde kullanılabilecek malzemeleri Türkçe adlarıyla ve yanlarında uygun emojilerle birlikte listele. marka isimleri dahil edilmesin. Liste sade, kısa ve tekrarsız olsun. Örnek: 🍎 Elma"
                     },
                     {
                       "type": "image_url",
                       "image_url": {
-                        "url": "$imageUrl"
+                        "url": "data:image/jpeg;base64,$base64"
                       }
                     }
                   ]
@@ -130,7 +119,8 @@ class HomeViewModel @Inject constructor(
                 val result = response.choices.firstOrNull()?.message?.content
                 val cleaned = result
                     ?.split(Regex("[\\n,•-]"))
-                    ?.mapNotNull { it.trim().takeIf { it.isNotEmpty() } }
+                    ?.mapNotNull { it.trim().removeSuffix(".").takeIf { it.isNotEmpty() } }
+                    //?.mapNotNull { it.trim().takeIf { it.isNotEmpty() } }
                     ?: emptyList()
 
                 _openAiItems.value = cleaned
@@ -345,5 +335,24 @@ features = listOf(
             }
         }
     }
+
+     */
+
+    /*
+
+        fun uploadImageToFirebase(uri: Uri) {
+        viewModelScope.launch {
+            try {
+                val url = storageRepository.uploadImageAndGetUrl(uri)
+                _uploadedImageUrl.value = url
+                Log.d("FirebaseUpload", "Download URL: $url")
+            } catch (e: Exception) {
+                Log.e("FirebaseUpload", "Upload failed: ${e.message}")
+            }
+        }
+    }
+
+        private val _uploadedImageUrl = MutableStateFlow<String?>(null)
+    val uploadedImageUrl: StateFlow<String?> = _uploadedImageUrl
 
      */

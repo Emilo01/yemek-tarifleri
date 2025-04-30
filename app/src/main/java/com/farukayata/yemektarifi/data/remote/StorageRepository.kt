@@ -7,6 +7,7 @@ import java.util.*
 import javax.inject.Inject
 import javax.inject.Singleton
 
+//storrege yüklenen görseli kaydetmede kullanıyorduk fakat şu anlık base 64 e geçtik gerek kalmadı
 @Singleton
 class StorageRepository @Inject constructor(){
     private val storageRef = FirebaseStorage.getInstance().reference
