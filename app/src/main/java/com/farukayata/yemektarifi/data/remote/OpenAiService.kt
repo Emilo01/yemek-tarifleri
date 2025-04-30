@@ -7,6 +7,19 @@ import retrofit2.http.Body
 import retrofit2.http.Headers
 import retrofit2.http.POST
 
+
+interface OpenAiService {
+    @Headers("Content-Type: application/json")
+    //APInin beklediği Content-Type ı manuel ayarladık
+    @POST("v1/chat/completions")
+    suspend fun getImageAnalysis(
+        @Body requestBody: RequestBody
+    ): OpenAiResponse
+}
+
+
+//https://api.openai.com/ kısmı zaten var yukarısı end point olarak kalmalı
+
 /*
 interface OpenAiService {
 
@@ -21,12 +34,3 @@ interface OpenAiService {
 }
 */
 
-
-interface OpenAiService {
-    @Headers("Content-Type: application/json")
-    @POST("v1/chat/completions")
-    suspend fun getImageAnalysis(
-        @Body requestBody: RequestBody
-    ): OpenAiResponse
-}
-//https://api.openai.com/ kısmı zaten var yukarısı end point olarak kalmalı

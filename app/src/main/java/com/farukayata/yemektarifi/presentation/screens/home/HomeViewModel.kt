@@ -13,12 +13,15 @@ import com.farukayata.yemektarifi.BuildConfig
 import com.farukayata.yemektarifi.data.remote.OpenAiService
 import com.farukayata.yemektarifi.data.remote.StorageRepository
 import com.farukayata.yemektarifi.data.remote.VisionApiService
+import com.farukayata.yemektarifi.data.remote.model.CategorizedItem
 import com.farukayata.yemektarifi.data.remote.model.VisionRequest
 import com.farukayata.yemektarifi.data.remote.model.VisionResponse
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.ByteArrayOutputStream
@@ -47,6 +50,10 @@ class HomeViewModel @Inject constructor(
     private val _openAiItems = MutableStateFlow<List<String>>(emptyList())
     val openAiItems: StateFlow<List<String>> = _openAiItems
 
+    private val _categorizedItems = MutableStateFlow<List<CategorizedItem>>(emptyList())
+    val categorizedItems: StateFlow<List<CategorizedItem>> = _categorizedItems
+
+
 
     fun setSelectedImage(uri: Uri?) {
         _selectedImageUri.value = uri
@@ -62,7 +69,7 @@ class HomeViewModel @Inject constructor(
 
                 //Sıkıştır
                 val outputStream = ByteArrayOutputStream()
-                bitmap.compress(Bitmap.CompressFormat.JPEG, 90, outputStream)
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 65, outputStream)
                 val byteArray = outputStream.toByteArray()
 
                 //Gerçek JPEG byte dizisini Base64'e çevir
@@ -83,7 +90,8 @@ class HomeViewModel @Inject constructor(
 
 
     fun analyzeWithOpenAi() {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
+            //Ağ ve Base64 işlemleri ana thread yerine IO thread'de çalışır
             //val imageUrl = _uploadedImageUrl.value ?: return@launch - storrage image kaydetmeyi saldık
             val base64 = _selectedImageBase64.value
 
@@ -97,7 +105,7 @@ class HomeViewModel @Inject constructor(
                   "content": [
                     {
                       "type": "text",
-                      "text": "Aşağıdaki görselde yemek yapımında kullanılabilecek bazı gıdalar olabilir. Lütfen yalnızca yenilebilir ve yemeklerin içinde kullanılabilecek malzemeleri Türkçe adlarıyla ve yanlarında uygun emojilerle birlikte listele. marka isimleri dahil edilmesin. Liste sade, kısa ve tekrarsız olsun. Örnek: 🍎 Elma"
+                      "text": "Aşağıdaki görselde yemek yapımında kullanılabilecek gıda ürünleri olabilir. Görseli analiz et ve sadece yenilebilir, yemek yapımında kullanılan ürünleri aşağıdaki formatta listele:\n\n🍅 Domates - Sebzeler\n🧀 Peynir - Yumurta ve Süt Ürünleri\n🐟 Somon - Balık ve Deniz Ürünleri\n\nLütfen her satıra bir ürün gelecek şekilde, yanına uygun bir emoji ve aşağıda belirtilen kategorilerden birini ekleyerek **Türkçe** yaz:\n\nEt ve Et Ürünleri\nBalık ve Deniz Ürünleri\nYumurta ve Süt Ürünleri\nTahıllar ve Unlu Mamuller\nBaklagiller\nSebzeler\nMeyveler\nBaharatlar ve Tat Vericiler\nYağlar ve Sıvılar\nKonserve ve Hazır Gıdalar\nTatlı Malzemeleri ve Kuruyemişler\n\n**Yalnızca bu kategori adlarını** kullan. marka isimleri veya tekrar eden benzer ürünleri listeleme. Liste tekrarsız olsun."
                     },
                     {
                       "type": "image_url",
@@ -117,6 +125,28 @@ class HomeViewModel @Inject constructor(
             try {
                 val response = openAiService.getImageAnalysis(requestBody)
                 val result = response.choices.firstOrNull()?.message?.content
+                val cleanedItems = result
+                    ?.lines()
+                    ?.mapNotNull { line ->
+                        val parts = line.split(" - ")
+                        if (parts.size == 2) {
+                            val emojiAndName = parts[0].trim()
+                            val category = parts[1].trim()
+
+                            val emoji = emojiAndName.takeWhile { !it.isLetterOrDigit() }.trim()
+                            val name = emojiAndName.dropWhile { !it.isLetterOrDigit() }.trim()
+
+                            CategorizedItem(emoji, name, category)
+                        } else null
+                    } ?: emptyList()
+
+                //_categorizedItems.value = cleanedItems
+                //artık ui güncellemesini main thread de yapıyoruz şu eklenti ile ;Dispatchers.io
+                withContext(Dispatchers.Main) {
+                    _categorizedItems.value = cleanedItems
+                }
+
+                /*-katagori de çekmeye başladık saldık burayı
                 val cleaned = result
                     ?.split(Regex("[\\n,•-]"))
                     ?.mapNotNull { it.trim().removeSuffix(".").takeIf { it.isNotEmpty() } }
@@ -124,6 +154,7 @@ class HomeViewModel @Inject constructor(
                     ?: emptyList()
 
                 _openAiItems.value = cleaned
+                */
 
             } catch (e: Exception) {
                 Log.e("OpenAI", "Hata: ${e.localizedMessage}")

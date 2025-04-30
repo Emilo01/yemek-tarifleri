@@ -13,6 +13,7 @@ import okhttp3.Request
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import javax.inject.Singleton
+import java.util.concurrent.TimeUnit
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -22,11 +23,28 @@ object OpenAiModule {
 
     @Provides
     @Singleton
+    fun provideOpenAiHttpClient(): OkHttpClient {
+        return OkHttpClient.Builder()
+            .addInterceptor { chain: Interceptor.Chain ->
+                val request: Request = chain.request().newBuilder()
+                    .addHeader("Authorization", "Bearer ${BuildConfig.OPENAI_API_KEY}")
+                    .build()
+                chain.proceed(request)
+            }
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .writeTimeout(30, TimeUnit.SECONDS)
+            .build()
+    }
+
+    @Provides
+    @Singleton
     fun provideOpenAiService(): OpenAiService {
         val client = OkHttpClient.Builder()
             .addInterceptor { chain: Interceptor.Chain ->
                 val request: Request = chain.request().newBuilder()
                     .addHeader("Authorization", "Bearer ${BuildConfig.OPENAI_API_KEY}")
+                    //Authorization header zaten OkHttpClient içinde verdik
                     .build()
                 chain.proceed(request)
             }

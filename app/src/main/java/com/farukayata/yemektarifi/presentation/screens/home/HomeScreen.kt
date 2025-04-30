@@ -16,6 +16,7 @@ import androidx.compose.ui.platform.LocalContext
 import android.util.Log
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.MaterialTheme
 
 @Composable
 fun HomeScreen(
@@ -28,6 +29,7 @@ fun HomeScreen(
 
     val localizedObjects by viewModel.localizedObjects.collectAsState()
     val openAiItems by viewModel.openAiItems.collectAsState()
+    val categorizedItems by viewModel.categorizedItems.collectAsState()
 
 
 
@@ -109,13 +111,49 @@ fun HomeScreen(
         }
         Spacer(modifier = Modifier.height(16.dp))
 
-        // OpenAI'dan gelen ürünler listesi
+        val categoryOrder = listOf(
+            "Et ve Et Ürünleri",
+            "Balık ve Deniz Ürünleri",
+            "Yumurta ve Süt Ürünleri",
+            "Tahıllar ve Unlu Mamuller",
+            "Baklagiller",
+            "Sebzeler",
+            "Meyveler",
+            "Baharatlar ve Tat Vericiler",
+            "Yağlar ve Sıvılar",
+            "Konserve ve Hazır Gıdalar",
+            "Tatlı Malzemeleri ve Kuruyemişler"
+        )
+
+        val grouped = categorizedItems.groupBy { it.category }
+        val sortedGroups = categoryOrder.mapNotNull { key ->
+            grouped[key]?.let { key to it }
+        }
+
+        LazyColumn {
+            sortedGroups.forEach { (category, items) ->
+                item {
+                    Text(
+                        text = category,
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
+                    )
+                }
+                items(items) { item ->
+                    Text(text = "${item.emoji} ${item.name}")
+                }
+            }
+        }
+
+        /*
+        // OpenAI'dan gelen ürünler listesi-eski ve katagorisiz
         LazyColumn {
             items(openAiItems) { item ->
                 Text(text = item)
                 Spacer(modifier = Modifier.height(4.dp))
             }
         }
+        */
     }
 }
 
