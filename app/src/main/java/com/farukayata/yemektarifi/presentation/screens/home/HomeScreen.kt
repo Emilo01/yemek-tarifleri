@@ -19,17 +19,15 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.graphics.Color
 
 import androidx.compose.material3.*
-import androidx.compose.ui.draw.alpha
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.fadeIn
-import androidx.compose.foundation.background
 import com.farukayata.yemektarifi.data.remote.ui.components.CategoryCard
 import com.farukayata.yemektarifi.data.remote.ui.components.EditItemsBottomSheet
 import com.farukayata.yemektarifi.data.remote.ui.components.LoadingAnimation
+import com.farukayata.yemektarifi.data.remote.ui.components.LottieAnimationView
+import androidx.compose.ui.graphics.Color
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -118,13 +116,61 @@ fun HomeScreen(
                     Text(text = "OpenAI ile Analiz Et")
                 }
 
-                userMessage?.let { msg ->
-                    Text(
-                        text = msg,
-                        color = Color.Red,
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.padding(vertical = 8.dp)
-                    )
+                //popup
+                var showDialog by remember { mutableStateOf(false) }
+
+                LaunchedEffect(userMessage) {
+                    if (!userMessage.isNullOrEmpty()) {
+                        showDialog = true
+                    }
+                }
+
+                if (showDialog) {
+                    userMessage?.let { message ->
+                        AlertDialog(
+                            onDismissRequest = {
+                                showDialog = false
+                                viewModel.clearUserMessage()
+                            },
+                            confirmButton = {
+                                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                                    Button(
+                                        onClick = {
+                                            showDialog = false
+                                            viewModel.clearUserMessage()
+                                        }
+                                    ) {
+                                        Text("Tamam")
+                                    }
+                                }
+                            },
+                            text = {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(8.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Text(
+                                        text = "Uyarı",
+                                        color = Color(0xFFEF5350),
+                                        style = MaterialTheme.typography.titleLarge
+                                    )
+
+                                    Spacer(modifier = Modifier.height(8.dp))
+
+                                    Text(
+                                        text = message,
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+
+                                    Spacer(modifier = Modifier.height(8.dp))
+
+                                    LottieAnimationView()
+                                }
+                            }
+                        )
+                    }
                 }
             }
 

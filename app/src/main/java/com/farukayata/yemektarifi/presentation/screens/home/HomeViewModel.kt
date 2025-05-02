@@ -84,7 +84,7 @@ class HomeViewModel @Inject constructor(
                 //Gerçek JPEG byte dizisini Base64'e çevir
                 val base64String = Base64.encodeToString(byteArray, Base64.NO_WRAP)
 
-                //Saf Base64'ü ata
+                //Saf Base64ü atadık
                 _selectedImageBase64.value = base64String
 
                 Log.d("VisionRequestCheck", "Yeni Base64 uzunluğu: ${base64String.length}")
@@ -312,71 +312,9 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-
-    /*
-    fun reAnalyzeWithFreeTextList(items: List<CategorizedItem>, userInputs: List<String>) {
-        viewModelScope.launch(Dispatchers.IO) {
-            _isLoading.value = true
-
-            // Kullanıcının onayladığı ürünleri satır satır yaz
-            val formattedItems = items.joinToString("\n") { "${it.emoji} ${it.name} - ${it.category}" }
-
-            // Kullanıcının sonradan eklediği "muz", "ceviz", vb. girdiler
-            val additionalItems = userInputs.joinToString("\n")
-
-            val json = """
-            {
-              "model": "gpt-4o",
-              "temperature": 0.2,
-              "top_p": 1,
-              "messages": [
-                {
-                  "role": "user",
-                  "content": [
-                    {
-                      "type": "text",
-                      "text": "Aşağıda yemek yapımında kullanılabilecek bazı ürünler verilmiştir. Bunların hepsini analiz et ve sadece yenilebilir, yemek yapımında kullanılabilecek olanları aşağıdaki formatta listele:\n\n$formattedItems\n$additionalItems\n\nFormat: 🍌 Muz - Meyveler\n\nLütfen tüm ürünleri aşağıdaki kategorilere göre sırala:\nEt ve Et Ürünleri\nBalık ve Deniz Ürünleri\nYumurta ve Süt Ürünleri\nTahıllar ve Unlu Mamuller\nBaklagiller\nSebzeler\nMeyveler\nBaharatlar ve Tat Vericiler\nYağlar ve Sıvılar\nKonserve ve Hazır Gıdalar\nTatlı Malzemeleri ve Kuruyemişler\n\nYalnızca bu kategori adlarını kullan. Emoji, ürün adı ve kategori olacak şekilde döndür."
-                    }
-                  ]
-                }
-              ],
-              "max_tokens": 500
-            }
-        """.trimIndent()
-
-            val requestBody = json.toRequestBody("application/json".toMediaType())
-
-            try {
-                val response = openAiService.getImageAnalysis(requestBody)
-                val result = response.choices.firstOrNull()?.message?.content
-                Log.d("OpenAIResult", result ?: "Null")
-
-                val cleanedItems = result?.lines()?.mapNotNull { line ->
-                    val parts = line.split(" - ")
-                    if (parts.size == 2) {
-                        val emojiAndName = parts[0].trim()
-                        val category = parts[1].trim()
-                        val emoji = emojiAndName.takeWhile { !it.isLetterOrDigit() }.trim()
-                        val name = emojiAndName.dropWhile { !it.isLetterOrDigit() }.trim()
-                        CategorizedItem(emoji, name, category)
-                    } else null
-                } ?: emptyList()
-
-                withContext(Dispatchers.Main) {
-                    _categorizedItems.value = cleanedItems
-                }
-            } catch (e: Exception) {
-                Log.e("OpenAI", "Hata: ${e.localizedMessage}")
-            } finally {
-                _isLoading.value = false
-            }
-        }
+    fun clearUserMessage() {
+        _userMessage.value = null
     }
-
-     */
-
-
-
 
 
     fun detectLabels() {
