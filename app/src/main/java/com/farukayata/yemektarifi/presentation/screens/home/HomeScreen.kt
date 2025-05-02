@@ -28,8 +28,11 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.foundation.background
 import com.farukayata.yemektarifi.data.remote.ui.components.CategoryCard
+import com.farukayata.yemektarifi.data.remote.ui.components.EditItemsBottomSheet
 import com.farukayata.yemektarifi.data.remote.ui.components.LoadingAnimation
 
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     modifier: Modifier = Modifier,
@@ -45,6 +48,8 @@ fun HomeScreen(
 
     val userMessage by viewModel.userMessage.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
+
+    var showEditBottomSheet by remember { mutableStateOf(false) }
 
 
     val context = LocalContext.current //-> contentresolver erişimi için lazım
@@ -150,6 +155,32 @@ fun HomeScreen(
 
             val grouped = categorizedItems.groupBy { it.category }
             val sortedGroups = categoryOrder.mapNotNull { key -> grouped[key]?.let { key to it } }
+
+            if (categorizedItems.isNotEmpty()) {
+                Button(
+                    onClick = { showEditBottomSheet = true },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 16.dp)
+                ) {
+                    Text("Ürünleri Onayla / Düzenle")
+                }
+            }
+
+            if (showEditBottomSheet) {
+                ModalBottomSheet(onDismissRequest = { showEditBottomSheet = false }) {
+                    EditItemsBottomSheet(
+                        initialItems = categorizedItems,
+                        onFinalize = { finalList,newInputs ->
+                            viewModel.setUserEditedItems(finalList)
+                            //viewModel.reAnalyzeWithEditedItems(finalList)
+                            viewModel.reAnalyzeWithFreeTextList(finalList,newInputs)
+                            showEditBottomSheet = false
+                        }
+                    )
+                }
+            }
+
 
 
             //Fade-in animasyon ve loading göstergesi

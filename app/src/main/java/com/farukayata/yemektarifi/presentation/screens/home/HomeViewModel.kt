@@ -30,7 +30,7 @@ import javax.inject.Inject
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val visionApiService: VisionApiService,
-//VisionApiService'ı constructor parametresi olarak aldık
+    //VisionApiServiceı constructor parametresi olarak aldık
     private val storageRepository: StorageRepository,
     private val openAiService: OpenAiService
 ) : ViewModel() {
@@ -60,7 +60,8 @@ class HomeViewModel @Inject constructor(
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
 
-
+    private val _userEditedItems = MutableStateFlow<List<CategorizedItem>>(emptyList())
+    val userEditedItems: StateFlow<List<CategorizedItem>> = _userEditedItems
 
 
     fun setSelectedImage(uri: Uri?) {
@@ -105,6 +106,39 @@ class HomeViewModel @Inject constructor(
             val base64 = _selectedImageBase64.value
 
 
+            //seçilenn görsel boşsa
+            if (base64.isBlank()) {
+                withContext(Dispatchers.Main) {
+                    _userMessage.value = "Lütfen önce bir görsel yükleyin."
+                }
+                _isLoading.value = false
+                return@launch
+            }
+
+            val promptText = """
+            Aşağıdaki görselde yemek yapımında kullanılabilecek gıda ürünleri olabilir. Görseli analiz et ve sadece yenilebilir, yemek yapımında kullanılan ürünleri aşağıdaki formatta listele:
+
+            🍅 Domates - Sebzeler  
+            🧀 Peynir - Yumurta ve Süt Ürünleri  
+            🐟 Somon - Balık ve Deniz Ürünleri  
+            🍎 Elma - Meyveler  
+
+            Lütfen her satıra bir ürün gelecek şekilde, yanına uygun bir emoji ve aşağıda belirtilen kategorilerden birini ekleyerek **Türkçe** yaz:
+
+            Et ve Et Ürünleri  
+            Balık ve Deniz Ürünleri  
+            Yumurta ve Süt Ürünleri  
+            Tahıllar ve Unlu Mamuller  
+            Baklagiller  
+            Sebzeler  
+            Meyveler  
+            Baharatlar ve Tat Vericiler  
+            Yağlar ve Sıvılar  
+            Konserve ve Hazır Gıdalar  
+            Tatlı Malzemeleri ve Kuruyemişler  
+
+            **Yalnızca bu kategori adlarını kullan.** Marka isimlerini veya tekrarlayan benzer ürünleri listeleme. Liste tekrarsız olsun.
+        """.trimIndent()
 
             val json = """
             {
@@ -117,7 +151,7 @@ class HomeViewModel @Inject constructor(
                   "content": [
                     {
                       "type": "text",
-                      "text": "Aşağıdaki görselde yemek yapımında kullanılabilecek gıda ürünleri olabilir. Görseli analiz et ve sadece yenilebilir, yemek yapımında kullanılan ürünleri aşağıdaki formatta listele:\n\n🍅 Domates - Sebzeler\n🧀 Peynir - Yumurta ve Süt Ürünleri\n🐟 Somon - Balık ve Deniz Ürünleri\n\nLütfen her satıra bir ürün gelecek şekilde, yanına uygun bir emoji ve aşağıda belirtilen kategorilerden birini ekleyerek **Türkçe** yaz:\n\nEt ve Et Ürünleri\nBalık ve Deniz Ürünleri\nYumurta ve Süt Ürünleri\nTahıllar ve Unlu Mamuller\nBaklagiller\nSebzeler\nMeyveler\nBaharatlar ve Tat Vericiler\nYağlar ve Sıvılar\nKonserve ve Hazır Gıdalar\nTatlı Malzemeleri ve Kuruyemişler\n\n**Yalnızca bu kategori adlarını** kullan. marka isimleri veya tekrar eden benzer ürünleri listeleme. Liste tekrarsız olsun."
+                      "text": "${promptText.replace("\"", "\\\"").replace("\n", "\\n")}"
                     },
                     {
                       "type": "image_url",
@@ -165,16 +199,6 @@ class HomeViewModel @Inject constructor(
                     _categorizedItems.value = cleanedItems
                 }
 
-                /*-katagori de çekmeye başladık saldık burayı
-                val cleaned = result
-                    ?.split(Regex("[\\n,•-]"))
-                    ?.mapNotNull { it.trim().removeSuffix(".").takeIf { it.isNotEmpty() } }
-                    //?.mapNotNull { it.trim().takeIf { it.isNotEmpty() } }
-                    ?: emptyList()
-
-                _openAiItems.value = cleaned
-                */
-
             } catch (e: Exception) {
                 Log.e("OpenAI", "Hata: ${e.localizedMessage}")
             } finally {
@@ -183,6 +207,175 @@ class HomeViewModel @Inject constructor(
         }
 
     }
+
+    fun setUserEditedItems(items: List<CategorizedItem>) {
+        _userEditedItems.value = items
+    }
+
+
+
+
+    //Listeye kullanıcıdan gelen eksik formatlı ürünler varsa bunları temizleyerek analiz ettik
+
+    fun reAnalyzeWithFreeTextList(items: List<CategorizedItem>, userInputs: List<String>) {
+        viewModelScope.launch(Dispatchers.IO) {
+            _isLoading.value = true
+
+            // Onaylanmış ürünleri formatla
+            val formattedItems = items.joinToString("\n") { "${it.emoji} ${it.name} - ${it.category}" }
+
+            // Serbest yazılmış ürünleri ayrı satırlar halinde birleştir
+            val freeInputs = userInputs.joinToString("\n") { it.trim() }
+
+            val fullPrompt = """
+            Aşağıda yemek yapımında kullanılabilecek bazı ürünler verilmiştir. 
+            Bunların hepsini analiz et ve sadece yenilebilir, yemek yapımında kullanılabilecek olanları aşağıdaki formatta listele:
+            
+            🍅 Domates - Sebzeler
+            🐟 Somon - Balık ve Deniz Ürünleri
+            🥛 Süt - Yumurta ve Süt Ürünleri
+
+            Aşağıdaki girdileri analiz et:
+            $formattedItems
+            $freeInputs
+
+            Format: 🍌 Muz - Meyveler
+
+            Lütfen tüm ürünleri aşağıdaki kategorilere göre sırala:
+            Et ve Et Ürünleri
+            Balık ve Deniz Ürünleri
+            Yumurta ve Süt Ürünleri
+            Tahıllar ve Unlu Mamuller
+            Baklagiller
+            Sebzeler
+            Meyveler
+            Baharatlar ve Tat Vericiler
+            Yağlar ve Sıvılar
+            Konserve ve Hazır Gıdalar
+            Tatlı Malzemeleri ve Kuruyemişler
+
+            Yalnızca bu kategori adlarını kullan. Emoji, ürün adı ve kategori olacak şekilde döndür.
+        """.trimIndent()
+
+            val safePrompt = fullPrompt
+                .replace("\"", "\\\"")
+                .replace("\n", "\\n")
+
+            //"text": ${fullPrompt.trim().replace("\"", "\\\"").replace("\n", "\\n").quote()}
+
+            val json = """
+            {
+              "model": "gpt-4o",
+              "temperature": 0.2,
+              "top_p": 1,
+              "messages": [
+                {
+                  "role": "user",
+                  "content": [
+                    {
+                      "type": "text",
+                      "text": "$safePrompt"
+                    }
+                  ]
+                }
+              ],
+              "max_tokens": 500
+            }
+        """.trimIndent()
+
+            val requestBody = json.toRequestBody("application/json".toMediaType())
+
+            try {
+                val response = openAiService.getImageAnalysis(requestBody)
+                val result = response.choices.firstOrNull()?.message?.content
+                Log.d("OpenAIResult", result ?: "Null")
+
+                val cleanedItems = result?.lines()?.mapNotNull { line ->
+                    val parts = line.split(" - ")
+                    if (parts.size == 2) {
+                        val emojiAndName = parts[0].trim()
+                        val category = parts[1].trim()
+                        val emoji = emojiAndName.takeWhile { !it.isLetterOrDigit() }.trim()
+                        val name = emojiAndName.dropWhile { !it.isLetterOrDigit() }.trim()
+                        CategorizedItem(emoji, name, category)
+                    } else null
+                } ?: emptyList()
+
+                withContext(Dispatchers.Main) {
+                    _categorizedItems.value = cleanedItems
+                }
+            } catch (e: Exception) {
+                Log.e("OpenAI", "Hata: ${e.localizedMessage}")
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
+
+    /*
+    fun reAnalyzeWithFreeTextList(items: List<CategorizedItem>, userInputs: List<String>) {
+        viewModelScope.launch(Dispatchers.IO) {
+            _isLoading.value = true
+
+            // Kullanıcının onayladığı ürünleri satır satır yaz
+            val formattedItems = items.joinToString("\n") { "${it.emoji} ${it.name} - ${it.category}" }
+
+            // Kullanıcının sonradan eklediği "muz", "ceviz", vb. girdiler
+            val additionalItems = userInputs.joinToString("\n")
+
+            val json = """
+            {
+              "model": "gpt-4o",
+              "temperature": 0.2,
+              "top_p": 1,
+              "messages": [
+                {
+                  "role": "user",
+                  "content": [
+                    {
+                      "type": "text",
+                      "text": "Aşağıda yemek yapımında kullanılabilecek bazı ürünler verilmiştir. Bunların hepsini analiz et ve sadece yenilebilir, yemek yapımında kullanılabilecek olanları aşağıdaki formatta listele:\n\n$formattedItems\n$additionalItems\n\nFormat: 🍌 Muz - Meyveler\n\nLütfen tüm ürünleri aşağıdaki kategorilere göre sırala:\nEt ve Et Ürünleri\nBalık ve Deniz Ürünleri\nYumurta ve Süt Ürünleri\nTahıllar ve Unlu Mamuller\nBaklagiller\nSebzeler\nMeyveler\nBaharatlar ve Tat Vericiler\nYağlar ve Sıvılar\nKonserve ve Hazır Gıdalar\nTatlı Malzemeleri ve Kuruyemişler\n\nYalnızca bu kategori adlarını kullan. Emoji, ürün adı ve kategori olacak şekilde döndür."
+                    }
+                  ]
+                }
+              ],
+              "max_tokens": 500
+            }
+        """.trimIndent()
+
+            val requestBody = json.toRequestBody("application/json".toMediaType())
+
+            try {
+                val response = openAiService.getImageAnalysis(requestBody)
+                val result = response.choices.firstOrNull()?.message?.content
+                Log.d("OpenAIResult", result ?: "Null")
+
+                val cleanedItems = result?.lines()?.mapNotNull { line ->
+                    val parts = line.split(" - ")
+                    if (parts.size == 2) {
+                        val emojiAndName = parts[0].trim()
+                        val category = parts[1].trim()
+                        val emoji = emojiAndName.takeWhile { !it.isLetterOrDigit() }.trim()
+                        val name = emojiAndName.dropWhile { !it.isLetterOrDigit() }.trim()
+                        CategorizedItem(emoji, name, category)
+                    } else null
+                } ?: emptyList()
+
+                withContext(Dispatchers.Main) {
+                    _categorizedItems.value = cleanedItems
+                }
+            } catch (e: Exception) {
+                Log.e("OpenAI", "Hata: ${e.localizedMessage}")
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
+     */
+
+
 
 
 

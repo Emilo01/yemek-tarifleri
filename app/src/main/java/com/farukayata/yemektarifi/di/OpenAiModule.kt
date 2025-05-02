@@ -31,15 +31,16 @@ object OpenAiModule {
                     .build()
                 chain.proceed(request)
             }
-            .connectTimeout(30, TimeUnit.SECONDS)
-            .readTimeout(60, TimeUnit.SECONDS)
-            .writeTimeout(60, TimeUnit.SECONDS)
+            .connectTimeout(60, TimeUnit.SECONDS) //Sunucuya bağlanmak için beklenen süre
+            .readTimeout(75, TimeUnit.SECONDS) //Sunucudan yanıt alınana kadar bekleme süresi
+            .writeTimeout(75, TimeUnit.SECONDS) //base64 görseli yazarken ağın yavaşlamasına karşı bekleme süresi
             .build()
     }
 
     @Provides
     @Singleton
-    fun provideOpenAiService(): OpenAiService {
+    fun provideOpenAiService(client: OkHttpClient): OpenAiService {
+        /*
         val client = OkHttpClient.Builder()
             .addInterceptor { chain: Interceptor.Chain ->
                 val request: Request = chain.request().newBuilder()
@@ -49,6 +50,8 @@ object OpenAiModule {
                 chain.proceed(request)
             }
             .build()
+
+         */
 
         return Retrofit.Builder()
             .baseUrl(BASE_URL)

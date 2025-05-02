@@ -20,17 +20,3 @@ interface OpenAiService {
 
 //https://api.openai.com/ kısmı zaten var yukarısı end point olarak kalmalı
 
-/*
-interface OpenAiService {
-
-    @Headers(
-        "Content-Type: application/json",
-        "Authorization: Bearer YOUR_OPENAI_API_KEY"
-    )
-    @POST("chat/completions")
-    suspend fun getImageAnalysis(
-        @Body requestBody: RequestBody
-    ): OpenAiResponse
-}
-*/
-
