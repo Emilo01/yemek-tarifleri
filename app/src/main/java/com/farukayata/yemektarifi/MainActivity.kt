@@ -40,7 +40,10 @@ class MainActivity : ComponentActivity() {
                         val isLoading = viewModel.isResultLoading.collectAsState().value
 
                         ResultScreen(
-                            categorizedItems = finalItems,
+
+
+
+                            userEditedItems = finalItems,
                             imageUri = imageUri,
                             isLoading = isLoading,
                             onBack = {

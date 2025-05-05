@@ -21,7 +21,8 @@ import androidx.compose.ui.graphics.Color
 
 @Composable
 fun ResultScreen(
-    categorizedItems: List<CategorizedItem>,
+    //categorizedItems: List<CategorizedItem>,
+    userEditedItems: List<CategorizedItem>, //listedeki herşey silinirse diye
     imageUri: Uri?,
     isLoading: Boolean,
     onBack: () -> Unit,
@@ -65,7 +66,7 @@ fun ResultScreen(
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    if (categorizedItems.isEmpty()) {
+                    if (userEditedItems.isEmpty()) {
                         Text(
                             text = "Gösterilecek ürün bulunamadı.",
                             style = MaterialTheme.typography.bodyLarge,
@@ -89,7 +90,7 @@ fun ResultScreen(
                     "Tatlı Malzemeleri ve Kuruyemişler"
                 )
 
-                val grouped = categorizedItems.groupBy { it.category }
+                val grouped = userEditedItems.groupBy { it.category }
                 val sortedGroups = categoryOrder.mapNotNull { key -> grouped[key]?.let { key to it } }
 
                 sortedGroups.forEach { (category, items) ->

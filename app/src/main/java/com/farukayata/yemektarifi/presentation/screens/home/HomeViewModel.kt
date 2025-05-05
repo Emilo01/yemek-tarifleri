@@ -76,16 +76,38 @@ class HomeViewModel @Inject constructor(
         _freeTextInputs.value = inputs
     }
 
+
+
+
+
+
     fun startReAnalyze() {
         val currentItems = _userEditedItems.value
         val inputs = _freeTextInputs.value
+
+        if (currentItems.isEmpty() && inputs.isEmpty()) {
+            _categorizedItems.value = emptyList()
+            _isResultLoading.value = false
+            _navigateToResult.value = false
+            return
+        }
+
         reAnalyzeWithFreeTextList(currentItems, inputs)
     }
 
 
 
-    fun triggerResultNavigation() { //detailscreenle ekledik
+
+
+
+
+
+    fun triggerResultNavigation() {
         _navigateToResult.value = true
+
+        if (_userEditedItems.value.isEmpty() && _freeTextInputs.value.isEmpty()) {
+            _categorizedItems.value = emptyList()
+        }
     }
 
     fun resetResultNavigation() { //detailscreenle ekledik
@@ -405,6 +427,8 @@ class HomeViewModel @Inject constructor(
         }
     }
 }
+
+
 
 //Uri'den bitmap alıyor → JPEG'e sıkıştırıyor → byteArray'e çeviriyor → Base64 encode ediyor
 

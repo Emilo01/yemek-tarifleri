@@ -1,5 +1,6 @@
 package com.farukayata.yemektarifi.presentation.screens.home
 
+import EditItemsBottomSheet
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -24,12 +25,12 @@ import androidx.compose.material3.*
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import com.farukayata.yemektarifi.data.remote.ui.components.CategoryCard
-import com.farukayata.yemektarifi.data.remote.ui.components.EditItemsBottomSheet
 import com.farukayata.yemektarifi.data.remote.ui.components.LoadingAnimation
 import com.farukayata.yemektarifi.data.remote.ui.components.LottieAnimationView
 import androidx.compose.ui.graphics.Color
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
+import com.farukayata.yemektarifi.data.remote.model.CategorizedItem
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -56,6 +57,7 @@ fun HomeScreen(
     val context = LocalContext.current //-> contentresolver erişimi için lazım
 
     val navigateToResult by viewModel.navigateToResult.collectAsState()
+
     LaunchedEffect(navigateToResult) {
         if (navigateToResult) {
             navController.navigate("result")
@@ -227,7 +229,7 @@ fun HomeScreen(
                 ModalBottomSheet(onDismissRequest = { showEditBottomSheet = false }) {
                     EditItemsBottomSheet(
                         initialItems = categorizedItems,
-                        onFinalize = { finalList,newInputs ->
+                        onFinalize = { finalList: List<CategorizedItem>, newInputs: List<String> ->
                             viewModel.setUserEditedItems(finalList)
 
                             viewModel.setFreeTextInputs(newInputs) // ➕ bunu yeni ekleyeceğiz
