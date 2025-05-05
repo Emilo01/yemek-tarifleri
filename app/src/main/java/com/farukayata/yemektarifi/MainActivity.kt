@@ -5,15 +5,16 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
 import com.farukayata.yemektarifi.presentation.screens.home.HomeScreen
 import com.farukayata.yemektarifi.ui.theme.YemekTarifiTheme
 import dagger.hilt.android.AndroidEntryPoint
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import com.farukayata.yemektarifi.presentation.screens.result.ResultScreen
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -22,8 +23,35 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             YemekTarifiTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    HomeScreen(modifier = Modifier.padding(innerPadding))
+                val navController = rememberNavController()
+                val viewModel = hiltViewModel<com.farukayata.yemektarifi.presentation.screens.home.HomeViewModel>()
+
+                NavHost(navController = navController, startDestination = "home") {
+                    composable("home") {
+                        HomeScreen(
+                            modifier = Modifier.fillMaxSize(),
+                            viewModel = viewModel,
+                            navController = navController
+                        )
+                    }
+                    composable("result") {
+                        val imageUri = viewModel.selectedImageUri.collectAsState().value
+                        val finalItems = viewModel.userEditedItems.collectAsState().value
+                        val isLoading = viewModel.isResultLoading.collectAsState().value
+
+                        ResultScreen(
+                            categorizedItems = finalItems,
+                            imageUri = imageUri,
+                            isLoading = isLoading,
+                            onBack = {
+                                navController.popBackStack()
+                                viewModel.resetResultNavigation()
+                            },
+                            startReAnalyze = {
+                                viewModel.startReAnalyze()
+                            }
+                        )
+                    }
                 }
             }
         }

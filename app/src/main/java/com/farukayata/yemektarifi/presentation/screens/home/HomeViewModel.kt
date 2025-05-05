@@ -63,6 +63,37 @@ class HomeViewModel @Inject constructor(
     private val _userEditedItems = MutableStateFlow<List<CategorizedItem>>(emptyList())
     val userEditedItems: StateFlow<List<CategorizedItem>> = _userEditedItems
 
+    private val _navigateToResult = MutableStateFlow(false)
+    val navigateToResult: StateFlow<Boolean> = _navigateToResult
+
+    private val _isResultLoading = MutableStateFlow(false)
+    val isResultLoading: StateFlow<Boolean> = _isResultLoading
+
+    private val _freeTextInputs = MutableStateFlow<List<String>>(emptyList())
+    val freeTextInputs: StateFlow<List<String>> = _freeTextInputs
+
+    fun setFreeTextInputs(inputs: List<String>) {
+        _freeTextInputs.value = inputs
+    }
+
+    fun startReAnalyze() {
+        val currentItems = _userEditedItems.value
+        val inputs = _freeTextInputs.value
+        reAnalyzeWithFreeTextList(currentItems, inputs)
+    }
+
+
+
+    fun triggerResultNavigation() { //detailscreenle ekledik
+        _navigateToResult.value = true
+    }
+
+    fun resetResultNavigation() { //detailscreenle ekledik
+        _navigateToResult.value = false
+
+        // 👇 Ana sayfaya dönünce kullanıcı onayladığı liste gösterilsin
+        _categorizedItems.value = _userEditedItems.value
+    }
 
     fun setSelectedImage(uri: Uri?) {
         _selectedImageUri.value = uri
@@ -81,7 +112,7 @@ class HomeViewModel @Inject constructor(
                 bitmap.compress(Bitmap.CompressFormat.JPEG, 65, outputStream)
                 val byteArray = outputStream.toByteArray()
 
-                //Gerçek JPEG byte dizisini Base64'e çevir
+                //Gerçek JPEG byte dizisini Base64e çevirdik
                 val base64String = Base64.encodeToString(byteArray, Base64.NO_WRAP)
 
                 //Saf Base64ü atadık
@@ -101,7 +132,7 @@ class HomeViewModel @Inject constructor(
     fun analyzeWithOpenAi() {
         viewModelScope.launch(Dispatchers.IO) {
             _isLoading.value = true
-            //Ağ ve Base64 işlemleri ana thread yerine IO thread'de çalışır
+            //Ağ ve Base64 işlemleri ana thread yerine IO threadde çalışır
             //val imageUrl = _uploadedImageUrl.value ?: return@launch - storrage image kaydetmeyi saldık
             val base64 = _selectedImageBase64.value
 
@@ -197,6 +228,7 @@ class HomeViewModel @Inject constructor(
                 //artık ui güncellemesini main thread de yapıyoruz şu eklenti ile ;Dispatchers.io
                 withContext(Dispatchers.Main) {
                     _categorizedItems.value = cleanedItems
+                    //_navigateToResult.value = true //edititembottomsheetten burraya çektik çünkü state etmeden çektiğimiz için liste gücel gitmiyordu ilk de
                 }
 
             } catch (e: Exception) {
@@ -220,48 +252,55 @@ class HomeViewModel @Inject constructor(
     fun reAnalyzeWithFreeTextList(items: List<CategorizedItem>, userInputs: List<String>) {
         viewModelScope.launch(Dispatchers.IO) {
             _isLoading.value = true
+            _isResultLoading.value = true
 
-            // Onaylanmış ürünleri formatla
+            // Kullanıcının onayladığı mevcut ürünleri formatla
             val formattedItems = items.joinToString("\n") { "${it.emoji} ${it.name} - ${it.category}" }
 
-            // Serbest yazılmış ürünleri ayrı satırlar halinde birleştir
-            val freeInputs = userInputs.joinToString("\n") { it.trim() }
+            // Serbest yazılmış ürünleri açık biçimde listele (her biri başında "-" olacak şekilde)
+            val userFreeInputsFormatted = userInputs
+                .filter { it.isNotBlank() }
+                .joinToString("\n") { "${it.trim()}" }
 
+            // OpenAI için güçlü ve net bir prompt
             val fullPrompt = """
             Aşağıda yemek yapımında kullanılabilecek bazı ürünler verilmiştir. 
-            Bunların hepsini analiz et ve sadece yenilebilir, yemek yapımında kullanılabilecek olanları aşağıdaki formatta listele:
-            
-            🍅 Domates - Sebzeler
-            🐟 Somon - Balık ve Deniz Ürünleri
-            🥛 Süt - Yumurta ve Süt Ürünleri
+            Bunları analiz et ve sadece yenilebilir, yemek yapımında kullanılan ürünleri aşağıdaki gibi formatla:
 
-            Aşağıdaki girdileri analiz et:
+            Örnek:
+            🥩 Et - Et ve Et Ürünleri
+            🐟 Palamut - Balık ve Deniz Ürünleri
+            🥚 Yumurta - Yumurta ve Süt Ürünleri
+
+            Format: [emoji] [ürün adı] - [kategori adı]
+
+            Aşağıdaki sistem tarafından algılanan ürünleri analiz et:
             $formattedItems
-            $freeInputs
 
-            Format: 🍌 Muz - Meyveler
+            Kullanıcının sonradan manuel olarak eklediği ürünler:
+            $userFreeInputsFormatted
 
-            Lütfen tüm ürünleri aşağıdaki kategorilere göre sırala:
-            Et ve Et Ürünleri
-            Balık ve Deniz Ürünleri
-            Yumurta ve Süt Ürünleri
-            Tahıllar ve Unlu Mamuller
-            Baklagiller
-            Sebzeler
-            Meyveler
-            Baharatlar ve Tat Vericiler
-            Yağlar ve Sıvılar
-            Konserve ve Hazır Gıdalar
+            Lütfen aşağıdaki kategori adlarından birini kullan:
+            Et ve Et Ürünleri  
+            Balık ve Deniz Ürünleri  
+            Yumurta ve Süt Ürünleri  
+            Tahıllar ve Unlu Mamuller  
+            Baklagiller  
+            Sebzeler  
+            Meyveler  
+            Baharatlar ve Tat Vericiler  
+            Yağlar ve Sıvılar  
+            Konserve ve Hazır Gıdalar  
             Tatlı Malzemeleri ve Kuruyemişler
 
-            Yalnızca bu kategori adlarını kullan. Emoji, ürün adı ve kategori olacak şekilde döndür.
+            🔴 Yalnızca bu kategori adlarını kullan.  
+            🔴 Her ürün için mutlaka **emoji, ürün adı ve kategori** içeren tek satırlık çıktı ver.  
+            🔴 Açıklayıcı cümle, açıklama veya başlık ekleme.  
+            🔴 Sadece ürün listesi ver.
         """.trimIndent()
 
-            val safePrompt = fullPrompt
-                .replace("\"", "\\\"")
-                .replace("\n", "\\n")
-
-            //"text": ${fullPrompt.trim().replace("\"", "\\\"").replace("\n", "\\n").quote()}
+            // Escape karakterleri
+            val safePrompt = fullPrompt.replace("\"", "\\\"").replace("\n", "\\n")
 
             val json = """
             {
@@ -293,7 +332,7 @@ class HomeViewModel @Inject constructor(
                 val cleanedItems = result?.lines()?.mapNotNull { line ->
                     val parts = line.split(" - ")
                     if (parts.size == 2) {
-                        val emojiAndName = parts[0].trim()
+                        val emojiAndName = parts[0].trim().removePrefix("-").trim()
                         val category = parts[1].trim()
                         val emoji = emojiAndName.takeWhile { !it.isLetterOrDigit() }.trim()
                         val name = emojiAndName.dropWhile { !it.isLetterOrDigit() }.trim()
@@ -303,14 +342,22 @@ class HomeViewModel @Inject constructor(
 
                 withContext(Dispatchers.Main) {
                     _categorizedItems.value = cleanedItems
+                    _userEditedItems.value = cleanedItems
+                    _isResultLoading.value = false
+                    _navigateToResult.value = true
                 }
+
             } catch (e: Exception) {
                 Log.e("OpenAI", "Hata: ${e.localizedMessage}")
+                withContext(Dispatchers.Main) {
+                    _isResultLoading.value = false
+                }
             } finally {
                 _isLoading.value = false
             }
         }
     }
+
 
     fun clearUserMessage() {
         _userMessage.value = null
@@ -357,38 +404,9 @@ class HomeViewModel @Inject constructor(
             }
         }
     }
-
 }
 
 //Uri'den bitmap alıyor → JPEG'e sıkıştırıyor → byteArray'e çeviriyor → Base64 encode ediyor
-
-//vision api için bu kısımı update ettik;
-/*
-fun convertImageToBase64(uri: Uri?, contentResolver: ContentResolver) {
-        uri?.let {
-            val inputStream = contentResolver.openInputStream(uri)
-            val bitmap = BitmapFactory.decodeStream(inputStream)
-            inputStream?.close()
-
-            val outputStream = ByteArrayOutputStream()
-            bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
-            val byteArray = outputStream.toByteArray()
-
-            val base64String = android.util.Base64.encodeToString(byteArray, android.util.Base64.NO_WRAP)
-            _selectedImageBase64.value = base64String
-        }
-    }
- */
-
-//features şöyle de olabilir ;
-/*
-features = listOf(
-                                VisionRequest.Feature(
-                                    type = "LABEL_DETECTION",
-                                    maxResults = 10
-                                )
-                            )
- */
 
 
 /*
@@ -474,53 +492,6 @@ features = listOf(
 
  */
 
-    /*
-
-    fun detectObjects() {
-        viewModelScope.launch {
-            try {
-                val base64Image = _selectedImageBase64.value
-                if (base64Image.isNotEmpty()) {
-                    val request = VisionRequest(
-                        requests = listOf(
-                            VisionRequest.Request(
-                                image = VisionRequest.Image(content = base64Image),
-                                features = listOf(
-                                    VisionRequest.Feature(
-                                        type = "OBJECT_LOCALIZATION",
-                                        maxResults = 20
-                                    )
-                                )
-                            )
-                        )
-                    )
-
-                    Log.d("VisionRequestCheck", "Gönderilecek Base64 ilk 100 karakter: ${base64Image.take(100)}")
-                    Log.d("VisionRequestCheck", "Base64 uzunluğu: ${base64Image.length}")
-                    Log.d("VisionRequestCheck", "Request içeriği: $request")
-
-                    val response = visionApiService.annotateImage(
-                        apiKey = BuildConfig.VISION_API_KEY,
-                        request = request
-                    )
-
-                    //val objects = response.responses.firstOrNull()?.localizedObjects ?: emptyList()
-                    val objects = response.responses.firstOrNull()?.localizedObjectAnnotations ?: emptyList()
-
-                    _localizedObjects.value = objects
-
-                    objects.forEach {
-                        Log.d("VisionAPI-Object", "Object: ${it.name} - Score: ${(it.score * 100).toInt()}%")
-                    }
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-                Log.e("VisionAPI", "Hata oluştu: ${e.message}")
-            }
-        }
-    }
-
-     */
 
     /*
 

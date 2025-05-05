@@ -28,13 +28,16 @@ import com.farukayata.yemektarifi.data.remote.ui.components.EditItemsBottomSheet
 import com.farukayata.yemektarifi.data.remote.ui.components.LoadingAnimation
 import com.farukayata.yemektarifi.data.remote.ui.components.LottieAnimationView
 import androidx.compose.ui.graphics.Color
+import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     modifier: Modifier = Modifier,
-    viewModel: HomeViewModel = hiltViewModel()
+    viewModel: HomeViewModel = hiltViewModel(),
+    navController: NavController
 ) {
     val selectedImageUri by viewModel.selectedImageUri.collectAsState()
     val selectedImageBase64 by viewModel.selectedImageBase64.collectAsState()
@@ -51,6 +54,13 @@ fun HomeScreen(
 
 
     val context = LocalContext.current //-> contentresolver erişimi için lazım
+
+    val navigateToResult by viewModel.navigateToResult.collectAsState()
+    LaunchedEffect(navigateToResult) {
+        if (navigateToResult) {
+            navController.navigate("result")
+        }
+    }
 
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -219,8 +229,13 @@ fun HomeScreen(
                         initialItems = categorizedItems,
                         onFinalize = { finalList,newInputs ->
                             viewModel.setUserEditedItems(finalList)
+
+                            viewModel.setFreeTextInputs(newInputs) // ➕ bunu yeni ekleyeceğiz
+                            viewModel.triggerResultNavigation()
+
                             //viewModel.reAnalyzeWithEditedItems(finalList)
-                            viewModel.reAnalyzeWithFreeTextList(finalList,newInputs)
+                            //viewModel.reAnalyzeWithFreeTextList(finalList,newInputs)
+                            //viewModel.triggerResultNavigation()//resourchscreen sayfasına geçiş için  -- viewmodelde withconntext e taşıdık stateden önce listein gücellemesi içi
                             showEditBottomSheet = false
                         }
                     )
@@ -267,16 +282,7 @@ fun HomeScreen(
 //HomeScreen doğrudan ViewModelden selectedImageUriı gözlemlicek
 //launcher ile fotoğraf seçince direkt viewModel.setSelectedImage(uri) dicez
 
-/*
-    Button(
-                onClick = {
-                    viewModel.detectLabels()
-                },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(text = "Görseldeki Ürünleri Tespit Et")
-            }
- */
+
 
 /*
                 /*
@@ -286,19 +292,8 @@ fun HomeScreen(
     }
 }
 
-         */
-
-
  */
 
-/*
-LazyColumn {
-    items(localizedObjects) { obj ->
-        Text(text = "${obj.name} (${(obj.score * 100).toInt()}%)")
-        Spacer(modifier = Modifier.height(4.dp))
-    }
-}
-*/
 
         /*-> columnn u box yaptık
             Column(
