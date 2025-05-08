@@ -72,11 +72,20 @@ class HomeViewModel @Inject constructor(
     private val _freeTextInputs = MutableStateFlow<List<String>>(emptyList())
     val freeTextInputs: StateFlow<List<String>> = _freeTextInputs
 
+    private val _selectedMealType = MutableStateFlow("")
+    val selectedMealType: StateFlow<String> = _selectedMealType
+
+    fun setSelectedMealType(type: String) {
+        _selectedMealType.value = type
+    }
+
     fun setFreeTextInputs(inputs: List<String>) {
         _freeTextInputs.value = inputs
     }
 
-
+    fun setMealType(mealType: String) {
+        _selectedMealType.value = mealType
+    }
 
 
 
@@ -431,107 +440,3 @@ class HomeViewModel @Inject constructor(
 
 
 //Uri'den bitmap alıyor → JPEG'e sıkıştırıyor → byteArray'e çeviriyor → Base64 encode ediyor
-
-
-/*
-    fun convertImageToBase64(uri: Uri?, contentResolver: ContentResolver) {
-        uri?.let {
-            val inputStream = contentResolver.openInputStream(uri)
-            val bitmap = BitmapFactory.decodeStream(inputStream)
-            inputStream?.close()
-
-            val outputStream = ByteArrayOutputStream()
-            bitmap.compress(Bitmap.CompressFormat.JPEG, 80, outputStream) // %80 kalite sıkıştırıyoruz
-            val byteArray = outputStream.toByteArray()
-
-            val base64String = Base64.encodeToString(byteArray, Base64.NO_WRAP)
-            _selectedImageBase64.value = base64String
-        }
-    }
-
-    fun convertImageToBase64_2(uri: Uri?, contentResolver: ContentResolver) {
-        uri?.let {
-            val inputStream = contentResolver.openInputStream(uri)
-            val bitmap = BitmapFactory.decodeStream(inputStream)
-            inputStream?.close()
-
-            // Görseli yeniden boyutlandır: örneğin genişlik 600px yapalım
-            val scaledBitmap = Bitmap.createScaledBitmap(
-                bitmap,
-                600, // hedef genişlik
-                (bitmap.height * (600.0f / bitmap.width)).toInt(), // oranı koru
-                true
-            )
-
-            val outputStream = ByteArrayOutputStream()
-            scaledBitmap.compress(Bitmap.CompressFormat.JPEG, 60, outputStream)
-            // %60 kaliteyle sıkıştırıyoruz
-
-            val byteArray = outputStream.toByteArray()
-            val base64String = Base64.encodeToString(byteArray, Base64.NO_WRAP)
-            _selectedImageBase64.value = base64String
-
-            Log.d("VisionRequestCheck", "Yeni Base64 uzunluğu: ${base64String.length}")
-        }
-    }
-
-    fun convertImageToBase64Compressed(uri: Uri?, contentResolver: ContentResolver) {
-        uri?.let {
-            val inputStream = contentResolver.openInputStream(uri)
-            val bitmap = BitmapFactory.decodeStream(inputStream)
-            inputStream?.close()
-
-            val outputStream = ByteArrayOutputStream()
-            bitmap.compress(Bitmap.CompressFormat.JPEG, 60, outputStream)
-            val byteArray = outputStream.toByteArray()
-
-            val base64String = Base64.encodeToString(byteArray, Base64.NO_WRAP)
-
-            // Base64 başına data:image/jpeg;base64, ekliyoruz!
-            val fullBase64 = "data:image/jpeg;base64,$base64String"
-
-            _selectedImageBase64.value = fullBase64
-
-            Log.d("VisionRequestCheck", "Yeni Base64 uzunluğu: ${fullBase64.length}")
-        }
-    }
-
-    fun convertImageToBase64Compressed_2(uri: Uri?, contentResolver: ContentResolver) {
-        uri?.let {
-            val inputStream = contentResolver.openInputStream(uri)
-            val bitmap = BitmapFactory.decodeStream(inputStream)
-            inputStream?.close()
-
-            val outputStream = ByteArrayOutputStream()
-            bitmap.compress(Bitmap.CompressFormat.JPEG, 60, outputStream) // %60 kalite
-            val byteArray = outputStream.toByteArray()
-
-            val base64String = Base64.encodeToString(byteArray, Base64.NO_WRAP)
-
-            _selectedImageBase64.value = base64String // SADECE Base64, başlık ekleme yok
-
-            Log.d("VisionRequestCheck", "Yeni Base64 uzunluğu: ${base64String.length}")
-        }
-    }
-
- */
-
-
-    /*
-
-        fun uploadImageToFirebase(uri: Uri) {
-        viewModelScope.launch {
-            try {
-                val url = storageRepository.uploadImageAndGetUrl(uri)
-                _uploadedImageUrl.value = url
-                Log.d("FirebaseUpload", "Download URL: $url")
-            } catch (e: Exception) {
-                Log.e("FirebaseUpload", "Upload failed: ${e.message}")
-            }
-        }
-    }
-
-        private val _uploadedImageUrl = MutableStateFlow<String?>(null)
-    val uploadedImageUrl: StateFlow<String?> = _uploadedImageUrl
-
-     */

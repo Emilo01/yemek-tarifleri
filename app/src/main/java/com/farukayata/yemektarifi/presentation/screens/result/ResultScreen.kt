@@ -15,12 +15,13 @@ import coil.compose.rememberAsyncImagePainter
 import com.farukayata.yemektarifi.data.remote.model.CategorizedItem
 import com.farukayata.yemektarifi.data.remote.ui.components.CategoryCard
 import com.farukayata.yemektarifi.data.remote.ui.components.LoadingAnimation
-import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.graphics.Color
+import androidx.navigation.NavController
 
 @Composable
 fun ResultScreen(
+    navController: NavController,
     //categorizedItems: List<CategorizedItem>,
     userEditedItems: List<CategorizedItem>, //listedeki herşey silinirse diye
     imageUri: Uri?,
@@ -98,6 +99,23 @@ fun ResultScreen(
                         CategoryCard(categoryName = category, items = items)
                     }
                 }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            val editedItems = userEditedItems
+
+            Button(
+                onClick = {
+                    //navController.navigate("mealType")
+                    navController.currentBackStackEntry?.savedStateHandle?.set("editedItems", editedItems)
+                    navController.navigate("mealType") // Bu route MealTypeScreen'e götürmeli
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            ) {
+                Text(text = "🍳 Hadi Yemek Pişirelim")
             }
 
             Spacer(modifier = Modifier.height(12.dp))

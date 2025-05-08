@@ -11,6 +11,7 @@ import androidx.compose.ui.graphics.Color
 
 @Composable
 fun LoadingOverlay(isVisible: Boolean) {
+    //bunun yerine lottieanimation kullanıyorum
     if (isVisible) {
         Box(
             modifier = Modifier

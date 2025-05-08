@@ -1,0 +1,118 @@
+package com.farukayata.yemektarifi.presentation.screens.recipesuggest
+
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavHostController
+import coil.compose.AsyncImage
+import com.airbnb.lottie.compose.LottieAnimation
+import com.airbnb.lottie.compose.LottieCompositionSpec
+import com.airbnb.lottie.compose.LottieConstants
+import com.airbnb.lottie.compose.rememberLottieComposition
+import com.farukayata.yemektarifi.data.remote.model.CategorizedItem
+import com.farukayata.yemektarifi.data.remote.model.RecipeItem
+import com.farukayata.yemektarifi.presentation.screens.recipesuggestion.RecipeSuggestionViewModel
+
+@Composable
+fun RecipeSuggestionScreen(
+    mealType: String,
+    items: List<CategorizedItem>,
+    viewModel: RecipeSuggestionViewModel = hiltViewModel(),
+    navController: NavHostController
+) {
+
+    //Yalnızca bir kez çalışsın diye mealType ve items hash'ine bağlı LaunchedEffect
+    //LaunchedEffect(mealType, items) { //ofak bir geliştirme yeniden tetiklenme adına
+    LaunchedEffect(mealType, items.map { it.name }) {
+        viewModel.generateRecipes(mealType, items)
+        //bu kısımı if yapısı içinne almak lazım ;if (recipes.isEmpty())
+    }
+
+    val isLoading by viewModel.isLoading.collectAsState()
+    val recipes by viewModel.recipes.collectAsState()
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        when {
+            isLoading -> {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    LottieAnimation(
+                        composition = rememberLottieComposition(LottieCompositionSpec.Asset("yemekler_tencere_loading.json")).value,
+                        iterations = LottieConstants.IterateForever,
+                        modifier = Modifier.size(180.dp)
+                    )
+                }
+            }
+
+
+            recipes.isEmpty() -> {
+                Text(
+                    text = "Henüz tarif oluşturulmadı.",
+                    modifier = Modifier.align(Alignment.Center)
+                )
+            }
+
+            else -> {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(recipes) { recipe ->
+                        RecipeCard(recipe = recipe, onClick = {
+                            navController.navigate("recipeDetail/${recipe.name}")
+                        })
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun RecipeCard(recipe: RecipeItem,onClick: () -> Unit) {
+    Card(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        //elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        elevation = CardDefaults.cardElevation(8.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+
+            AsyncImage(
+                model = recipe.imageUrl,
+                contentDescription = "Yemeğin görseli",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(180.dp),
+                contentScale = ContentScale.Crop
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(text = recipe.name.replace("**", ""), style = MaterialTheme.typography.titleMedium)
+            Text(text = "⏱️ ${recipe.duration.replace("**", "")}")
+            Text(text = "📍 ${recipe.region.replace("**", "")}")
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(text = "Eksik Ürünler: ${if (recipe.missingIngredients.isEmpty()) "Eksik ürün yok" else recipe.missingIngredients.joinToString(", ").replace("**", "")}")
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            //Text(text = "Tarif:\n${recipe.description.replace("**", "")}")
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(text = "Malzemeler:\n${recipe.ingredients.joinToString(", ").replace("**", "")}")
+        }
+    }
+}

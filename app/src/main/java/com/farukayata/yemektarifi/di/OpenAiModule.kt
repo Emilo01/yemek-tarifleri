@@ -2,6 +2,8 @@ package com.farukayata.yemektarifi.di
 
 import com.farukayata.yemektarifi.BuildConfig
 import com.farukayata.yemektarifi.data.remote.OpenAiService
+import com.farukayata.yemektarifi.data.remote.repository.OpenAiRepositoryImpl
+import com.farukayata.yemektarifi.domain.OpenAiRepository
 import com.google.gson.Gson
 import dagger.Module
 import dagger.Provides
@@ -40,18 +42,6 @@ object OpenAiModule {
     @Provides
     @Singleton
     fun provideOpenAiService(client: OkHttpClient): OpenAiService {
-        /*
-        val client = OkHttpClient.Builder()
-            .addInterceptor { chain: Interceptor.Chain ->
-                val request: Request = chain.request().newBuilder()
-                    .addHeader("Authorization", "Bearer ${BuildConfig.OPENAI_API_KEY}")
-                    //Authorization header zaten OkHttpClient içinde verdik
-                    .build()
-                chain.proceed(request)
-            }
-            .build()
-
-         */
 
         return Retrofit.Builder()
             .baseUrl(BASE_URL)
@@ -60,4 +50,14 @@ object OpenAiModule {
             .build()
             .create(OpenAiService::class.java)
     }
+
+    @Provides
+    @Singleton
+    fun provideOpenAiRepository(
+        openAiService: OpenAiService,
+        gson: Gson
+    ): OpenAiRepository {
+        return OpenAiRepositoryImpl(openAiService, gson)
+    }
+
 }

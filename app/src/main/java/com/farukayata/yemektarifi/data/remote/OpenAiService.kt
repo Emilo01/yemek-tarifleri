@@ -1,7 +1,7 @@
 package com.farukayata.yemektarifi.data.remote
 
+import com.farukayata.yemektarifi.data.remote.model.OpenAiImageResponse
 import com.farukayata.yemektarifi.data.remote.model.OpenAiResponse
-import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody
 import retrofit2.http.Body
 import retrofit2.http.Headers
@@ -15,6 +15,17 @@ interface OpenAiService {
     suspend fun getImageAnalysis(
         @Body requestBody: RequestBody
     ): OpenAiResponse
+
+    /*
+    //dally için
+    @POST("v1/images/generations")
+    suspend fun generateImage(@Body request: RequestBody): OpenAiRespons
+     */
+
+    @POST("v1/images/generations")
+    suspend fun generateImage(@Body request: RequestBody): OpenAiImageResponse
+
+
 }
 
 

@@ -36,15 +36,3 @@ object VisionApiModule {
     }
 
 }
-
-/*
-@Provides
-@Singleton
-fun provideVisionApiService(): VisionApiService {
-    return Retrofit.Builder()
-        .baseUrl(BASE_URL)
-        .addConverterFactory(GsonConverterFactory.create())
-        .build()
-        .create(VisionApiService::class.java)
-}
-*/
