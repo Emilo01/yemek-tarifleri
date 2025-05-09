@@ -23,12 +23,21 @@ fun RecipeDetailScreen(recipe: RecipeItem) {
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         item {
-            Text(
-                text = recipe.name,
-                style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.fillMaxWidth(),
-                textAlign = TextAlign.Center
-            )
+            if (recipe.name.isNotBlank()) {
+                Text(
+                    text = recipe.name,
+                    style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Center
+                )
+            } else {
+                Text(
+                    text = "Tarif adı bulunamadı",
+                    style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Center
+                )
+            }
         }
 
         item {
@@ -47,24 +56,73 @@ fun RecipeDetailScreen(recipe: RecipeItem) {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(text = "📍 ${recipe.region}")
-                Text(text = "⏱️ ${recipe.duration}")
+                Text(text = "📍 ${if (recipe.region.isNotBlank()) recipe.region else "Bölge bilgisi yok"}")
+                Text(text = "⏱️ ${if (recipe.duration.isNotBlank()) recipe.duration else "Süre bilgisi yok"}")
+            }
+        }
+
+        item {
+            if (recipe.missingIngredients.isNotEmpty()) {
+                Text("⚠️ Eksik Ürünler:", style = MaterialTheme.typography.titleMedium)
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    recipe.missingIngredients.forEach { missing ->
+                        Text("• $missing")
+                    }
+                }
+            } else {
+                Text("Eksik Ürün yok ✅", style = MaterialTheme.typography.titleMedium)
             }
         }
 
         item {
             Text("👨‍🍳 Hazırlanışı:", style = MaterialTheme.typography.titleMedium)
-            //Text(recipe.description)
-            Text(if (recipe.description.isNotBlank()) recipe.description else "Tarif açıklaması bulunamadı.")
+            if (recipe.description.isNotBlank()) {
+                Text(recipe.description)
+            } else {
+                Text("Hazırlık aşamaları bulunamadı.")
+            }
+        }
 
+        if (recipe.ingredientDetails.isNotBlank()) {
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+                    elevation = CardDefaults.cardElevation(4.dp)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text("🧂 Malzeme Kullanım Detayı", style = MaterialTheme.typography.titleMedium)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        recipe.ingredientDetails
+                            .split("\n")
+                            .map { it.trim() }
+                            .filter { it.isNotBlank() && it.trim() != "-" }
+                            .forEach { line ->
+                                val cleanedLine = line.removePrefix("-").removePrefix("•").trim()
+                                Text("• $cleanedLine")
+                            }
+                    }
+                }
+            }
+        } else {
+            item {
+                Text(
+                    text = "Uygun Malzeme kullanım detayı bulunamadı.",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
         }
 
         item {
             Text("🛒 Malzemeler:", style = MaterialTheme.typography.titleMedium)
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                recipe.ingredients.forEach { ing ->
-                    Text("• $ing")
+            if (recipe.ingredients.isNotEmpty()) {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    recipe.ingredients.forEach { ing ->
+                        Text("• $ing")
+                    }
                 }
+            } else {
+                Text("Malzeme listesi bulunamadı.")
             }
         }
 

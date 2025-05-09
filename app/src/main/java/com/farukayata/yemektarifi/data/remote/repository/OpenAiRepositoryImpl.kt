@@ -130,9 +130,11 @@ class OpenAiRepositoryImpl @Inject constructor(
         Her tarifte, malzeme eksikse "Eksik Malzemeler" başlığında belirt. Eksik olsa bile tarif öner.
         
         Her tarif için şu alanları **net ve ayrı** şekilde belirt:
+        - Malzeme Kullanım Detayı: (örn: “2 adet büyük bostan patlıcan, 1 çay kaşığı tuz, 1 adet orta boy soğan”)
         - Tarif Adı:
         - Süre (örn. 30 dk):
         - Bölge:
+        - Özet (1–2 cümlelik tanıtım, tadı veya kültürel kökeni hakkında bilgi ver): 
         - Açıklama (Adım adım, 3–5 aşamada hazırlanışı anlatmalı. Bu kısmı **boş bırakma**):
         - Kullanılan Malzemeler:
         - Eksik Malzemeler (eğer varsa, yoksa "Eksik yok" yaz):
@@ -144,6 +146,12 @@ class OpenAiRepositoryImpl @Inject constructor(
         Tarif Adı: Ananaslı Tavuk Salatası
         Süre: 25 dk
         Bölge: Tropikal
+        Malzeme Kullanım Detayı:
+        - 200 gram haşlanmış tavuk göğsü
+        - 4 dilim ananas
+        - Yarım demet marul
+        - 2 yemek kaşığı yoğurt
+        - Tuz, karabiber
         Açıklama: ...
         Kullanılan Malzemeler: Tavuk, Ananas, Marul
         Eksik Malzemeler: Yoğurt
@@ -165,6 +173,15 @@ class OpenAiRepositoryImpl @Inject constructor(
         val entries = text.split(Regex("Tarif \\d+:")).map { it.trim() }.filter { it.isNotBlank() }
 
         for (entry in entries) {
+            val summary = Regex("(?i)Özet\\s*:\\s*(.*)").find(entry)?.groupValues?.get(1)?.trim() ?: ""
+            //val ingredientDetails = Regex("(?i)Malzeme Kullanım Detayı\\s*:\\s*(.*)").find(entry)?.groupValues?.get(1)?.trim() ?: ""
+            val ingredientDetails = Regex(
+                "(?i)Malzeme Kullanım Detayı\\s*:\\s*(.*?)(?=Tarif Adı:|Süre:|Bölge:|Özet:|Açıklama:|Kullanılan Malzemeler:|Eksik Malzemeler:|Görsel Tanımı:|$)",
+                RegexOption.DOT_MATCHES_ALL
+            ).find(entry)?.groupValues?.get(1)?.trim() ?: ""
+
+            Log.d("RecipeDebug", "Malzeme Detayı: $ingredientDetails")
+
             Log.d("ParseRecipe", "Entry: $entry") //tarif bloğum için
 
             val name = Regex("(?i)Tarif Adı\\s*:\\s*(.*)").find(entry)?.groupValues?.get(1)?.trim() ?: "Bilinmeyen"
@@ -196,7 +213,9 @@ class OpenAiRepositoryImpl @Inject constructor(
                     region = region,
                     description = description,
                     ingredients = ingredients,
-                    missingIngredients = missing
+                    missingIngredients = missing,
+                    ingredientDetails = ingredientDetails,
+                    summary = summary
                 )
             )
         }

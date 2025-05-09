@@ -7,5 +7,7 @@ data class RecipeItem(
     val region: String,
     val description: String,
     val ingredients: List<String>, //-> malzeme listesi
-    val missingIngredients: List<String> = emptyList() //eksik ürü için
+    val missingIngredients: List<String> = emptyList(), //eksik ürü için
+    val ingredientDetails: String = "",
+    val summary: String = ""
 )

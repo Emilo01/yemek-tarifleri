@@ -57,7 +57,7 @@ fun RecipeSuggestionScreen(
         Log.d("RecipeFlow", "generateRecipes çağrıldı: $mealType / items=${items.map { it.name }}")
         viewModel.generateRecipes(mealType, items) { recipes ->
             Log.d("RecipeFlow", "Tarifler set ediliyor: ${recipes.map { it.name }}")
-            homeViewModel.setRecipes(recipes)
+            //homeViewModel.setRecipes(recipes)
             homeViewModel.setRecipes(recipes)
         }
     }
@@ -142,12 +142,27 @@ fun RecipeCard(recipe: RecipeItem,onClick: () -> Unit) {
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            Text(text = "Eksik Ürünler: ${if (recipe.missingIngredients.isEmpty()) "Eksik ürün yok" else recipe.missingIngredients.joinToString(", ").replace("**", "")}")
+            if (recipe.summary.isNotBlank()) {
+                Text(
+                    text = "✨ ${recipe.summary}",
+                    style = MaterialTheme.typography.bodySmall
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+            }
+
+            //Text(text = "Eksik Ürünler: ${if (recipe.missingIngredients.isEmpty()) "Eksik ürün yok ✅" else recipe.missingIngredients.joinToString(", ").replace("**", "")}")
+
+            if (recipe.missingIngredients.isEmpty()) {
+                Text(text = "Eksik ürün yok ✅")
+            } else {
+                Text(text = "⚠️ Eksik Ürünler: ${recipe.missingIngredients.joinToString(", ").replace("**", "")}")
+            }
+
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            Text(text = "Tarif:\n${recipe.description.replace("**", "")}")
-            Spacer(modifier = Modifier.height(8.dp))
+            //Text(text = "Tarif:\n${recipe.description.replace("**", "")}")
+            //Spacer(modifier = Modifier.height(8.dp))
             Text(text = "Malzemeler:\n${recipe.ingredients.joinToString(", ").replace("**", "")}")
         }
     }
