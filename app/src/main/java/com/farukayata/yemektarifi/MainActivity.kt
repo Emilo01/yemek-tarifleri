@@ -1,6 +1,7 @@
 package com.farukayata.yemektarifi
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -18,8 +19,11 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.farukayata.yemektarifi.presentation.screens.mealtype.MealTypeScreen
+import com.farukayata.yemektarifi.presentation.screens.recipedetail.RecipeDetailScreen
 import com.farukayata.yemektarifi.presentation.screens.recipesuggest.RecipeSuggestionScreen
+import com.farukayata.yemektarifi.presentation.screens.recipesuggestion.RecipeSuggestionViewModel
 import com.farukayata.yemektarifi.presentation.screens.result.ResultScreen
+import java.net.URLDecoder
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -30,6 +34,7 @@ class MainActivity : ComponentActivity() {
             YemekTarifiTheme {
                 val navController = rememberNavController()
                 val viewModel = hiltViewModel<com.farukayata.yemektarifi.presentation.screens.home.HomeViewModel>()
+                val suggestionViewModel = hiltViewModel<RecipeSuggestionViewModel>()
 
                 NavHost(navController = navController, startDestination = "home") {
                     composable("home") {
@@ -74,9 +79,51 @@ class MainActivity : ComponentActivity() {
                         RecipeSuggestionScreen(
                             mealType = mealTypeArg,
                             items = ingredients,
-                            navController = navController
+                            navController = navController,
+                            homeViewModel = viewModel
                         )
                     }
+
+                    /*
+                    composable(
+                        route = "recipeDetail/{recipeName}",
+                        arguments = listOf(navArgument("recipeName") { type = NavType.StringType })
+                    ) { backStackEntry ->
+                        val recipeName = backStackEntry.arguments?.getString("recipeName") ?: ""
+                        val recipeList = suggestionViewModel.recipes.collectAsState().value
+                        val recipe = recipeList.find { it.name == recipeName }
+
+                        if (recipe != null) {
+                            RecipeDetailScreen(recipe = recipe)
+                        } else {
+                            //hata mesajı yerine
+                            Text("Tarif bulunamadı: $recipeName")
+                        }
+                    }
+
+                     */
+
+
+                    composable(
+                        route = "recipeDetail/{recipeName}",
+                        arguments = listOf(navArgument("recipeName") { type = NavType.StringType })
+                    ) { backStackEntry ->
+                        //val recipeName = backStackEntry.arguments?.getString("recipeName") ?: ""
+                        val recipeName = URLDecoder.decode(backStackEntry.arguments?.getString("recipeName") ?: "", "UTF-8")
+                        Log.d("RecipeFlow", "Detay ekranı açıldı, gelen ad: $recipeName")
+                        val recipeList = viewModel.recipes.collectAsState().value
+                        Log.d("RecipeFlow", "HomeViewModel'daki tarif listesi: ${recipeList.map { it.name }}")
+                        val recipe = recipeList.find { it.name == recipeName }
+                        Log.d("RecipeFlow", "Eşleşen tarif: ${recipe?.name}")
+
+                        if (recipe != null) {
+                            RecipeDetailScreen(recipe = recipe)
+                        } else {
+                            Text("Tarif bulunamadı: $recipeName")
+                        }
+                    }
+
+
                 }
             }
         }

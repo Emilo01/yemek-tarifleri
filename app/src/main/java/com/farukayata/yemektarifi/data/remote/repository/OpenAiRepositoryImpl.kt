@@ -133,7 +133,7 @@ class OpenAiRepositoryImpl @Inject constructor(
         - Tarif Adı:
         - Süre (örn. 30 dk):
         - Bölge:
-        - Açıklama (Adım adım):
+        - Açıklama (Adım adım, 3–5 aşamada hazırlanışı anlatmalı. Bu kısmı **boş bırakma**):
         - Kullanılan Malzemeler:
         - Eksik Malzemeler (eğer varsa, yoksa "Eksik yok" yaz):
         - Görsel Tanımı (DALL·E ile üretim için kullanılacak bir açıklama):
@@ -170,7 +170,12 @@ class OpenAiRepositoryImpl @Inject constructor(
             val name = Regex("(?i)Tarif Adı\\s*:\\s*(.*)").find(entry)?.groupValues?.get(1)?.trim() ?: "Bilinmeyen"
             val duration = Regex("(?i)Süre\\s*:\\s*(.*)").find(entry)?.groupValues?.get(1)?.trim() ?: "-"
             val region = Regex("(?i)Bölge\\s*:\\s*(.*)").find(entry)?.groupValues?.get(1)?.trim() ?: "-"
-            val description = Regex("(?i)Açıklama\\s*:\\s*(.*?)(?=Kullanılan Malzemeler:)").find(entry)?.groupValues?.get(1)?.trim() ?: "-"
+            //val description = Regex("(?i)Açıklama\\s*:\\s*(.*?)(?=Kullanılan Malzemeler:)").find(entry)?.groupValues?.get(1)?.trim() ?: "-"
+            val description = Regex(
+                "(?i)Açıklama\\s*:\\s*(.*?)(?=Kullanılan Malzemeler:)",
+                RegexOption.DOT_MATCHES_ALL
+            ).find(entry)?.groupValues?.get(1)?.trim() ?: "-"
+
             val ingredients = Regex("(?i)Kullanılan Malzemeler\\s*:\\s*(.*)").find(entry)?.groupValues?.get(1)
                 ?.split(",")?.map { it.trim() } ?: emptyList()
             val missing = Regex("(?i)Eksik Malzemeler\\s*:\\s*(.*)").find(entry)?.groupValues?.get(1)
@@ -179,6 +184,8 @@ class OpenAiRepositoryImpl @Inject constructor(
             val imageDescription = Regex("(?i)Görsel Tanımı\\s*:\\s*(.*)").find(entry)?.groupValues?.get(1)?.trim() ?: ""
 
             Log.d("ParseRecipe", "Name: $name, Description: $description, Image: $imageDescription")//yaptığım parse işlemi sonrası chek etmek için
+            Log.d("RecipeDebug", "Açıklama alanı: $description")
+            Log.d("RecipeDebug", "Açıklama alanı: $description")
 
 
             recipes.add(

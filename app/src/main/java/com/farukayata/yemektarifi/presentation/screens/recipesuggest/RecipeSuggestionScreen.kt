@@ -1,5 +1,6 @@
 package com.farukayata.yemektarifi.presentation.screens.recipesuggest
 
+import android.util.Log
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -17,7 +18,10 @@ import com.airbnb.lottie.compose.LottieCompositionSpec
 import com.airbnb.lottie.compose.LottieConstants
 import com.airbnb.lottie.compose.rememberLottieComposition
 import com.farukayata.yemektarifi.data.remote.model.CategorizedItem
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 import com.farukayata.yemektarifi.data.remote.model.RecipeItem
+import com.farukayata.yemektarifi.presentation.screens.home.HomeViewModel
 import com.farukayata.yemektarifi.presentation.screens.recipesuggestion.RecipeSuggestionViewModel
 
 @Composable
@@ -25,14 +29,37 @@ fun RecipeSuggestionScreen(
     mealType: String,
     items: List<CategorizedItem>,
     viewModel: RecipeSuggestionViewModel = hiltViewModel(),
-    navController: NavHostController
+    navController: NavHostController,
+    homeViewModel: HomeViewModel
 ) {
+
+    //val homeViewModel = hiltViewModel<HomeViewModel>()
 
     //Yalnızca bir kez çalışsın diye mealType ve items hash'ine bağlı LaunchedEffect
     //LaunchedEffect(mealType, items) { //ofak bir geliştirme yeniden tetiklenme adına
+    /*
     LaunchedEffect(mealType, items.map { it.name }) {
         viewModel.generateRecipes(mealType, items)
         //bu kısımı if yapısı içinne almak lazım ;if (recipes.isEmpty())
+    }
+
+     */
+
+    /*
+    LaunchedEffect(mealType, items.map { it.name }) {
+        viewModel.generateRecipes(mealType, items) { generatedRecipes ->
+            homeViewModel.setRecipes(generatedRecipes)
+        }
+    }
+     */
+
+    LaunchedEffect(mealType, items.map { it.name }) {
+        Log.d("RecipeFlow", "generateRecipes çağrıldı: $mealType / items=${items.map { it.name }}")
+        viewModel.generateRecipes(mealType, items) { recipes ->
+            Log.d("RecipeFlow", "Tarifler set ediliyor: ${recipes.map { it.name }}")
+            homeViewModel.setRecipes(recipes)
+            homeViewModel.setRecipes(recipes)
+        }
     }
 
     val isLoading by viewModel.isLoading.collectAsState()
@@ -67,11 +94,20 @@ fun RecipeSuggestionScreen(
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
+                    /*
                     items(recipes) { recipe ->
                         RecipeCard(recipe = recipe, onClick = {
                             navController.navigate("recipeDetail/${recipe.name}")
                         })
                     }
+                    */
+                    items(recipes) { recipe ->
+                        val encodedName = URLEncoder.encode(recipe.name, StandardCharsets.UTF_8.toString())
+                        RecipeCard(recipe = recipe, onClick = {
+                            navController.navigate("recipeDetail/$encodedName")
+                        })
+                    }
+
                 }
             }
         }
@@ -110,7 +146,7 @@ fun RecipeCard(recipe: RecipeItem,onClick: () -> Unit) {
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            //Text(text = "Tarif:\n${recipe.description.replace("**", "")}")
+            Text(text = "Tarif:\n${recipe.description.replace("**", "")}")
             Spacer(modifier = Modifier.height(8.dp))
             Text(text = "Malzemeler:\n${recipe.ingredients.joinToString(", ").replace("**", "")}")
         }

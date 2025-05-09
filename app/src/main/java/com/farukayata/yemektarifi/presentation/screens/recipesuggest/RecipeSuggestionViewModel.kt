@@ -1,5 +1,6 @@
 package com.farukayata.yemektarifi.presentation.screens.recipesuggestion
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.farukayata.yemektarifi.data.remote.model.CategorizedItem
@@ -22,6 +23,7 @@ class RecipeSuggestionViewModel @Inject constructor(
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
 
+    /*
     fun generateRecipes(mealType: String, items: List<CategorizedItem>) {
         viewModelScope.launch {
             _isLoading.value = true
@@ -33,4 +35,25 @@ class RecipeSuggestionViewModel @Inject constructor(
             _isLoading.value = false
         }
     }
+
+     */
+    fun generateRecipes(mealType: String, items: List<CategorizedItem>, onResult: (List<RecipeItem>) -> Unit) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            val itemNames = items.map { it.name }
+            val response = openAiRepository.getRecipes(mealType, itemNames)
+
+            //ilk tarifi kontrol
+            if (response.isNotEmpty()) {
+                Log.d("RecipeDebug", "OpenAI'dan gelen tarif açıklaması: ${response[0].description}")
+            } else {
+                Log.d("RecipeDebug", "OpenAI'dan tarif gelmedi.")
+            }
+
+            _recipes.value = response
+            _isLoading.value = false
+            onResult(response)
+        }
+    }
+
 }

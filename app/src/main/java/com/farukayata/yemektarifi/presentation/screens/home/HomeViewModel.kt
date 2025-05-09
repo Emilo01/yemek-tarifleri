@@ -14,12 +14,14 @@ import com.farukayata.yemektarifi.data.remote.OpenAiService
 import com.farukayata.yemektarifi.data.remote.StorageRepository
 import com.farukayata.yemektarifi.data.remote.VisionApiService
 import com.farukayata.yemektarifi.data.remote.model.CategorizedItem
+import com.farukayata.yemektarifi.data.remote.model.RecipeItem
 import com.farukayata.yemektarifi.data.remote.model.VisionRequest
 import com.farukayata.yemektarifi.data.remote.model.VisionResponse
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
@@ -79,6 +81,15 @@ class HomeViewModel @Inject constructor(
         _selectedMealType.value = type
     }
 
+    private val _recipes = MutableStateFlow<List<RecipeItem>>(emptyList())
+    val recipes: StateFlow<List<RecipeItem>> = _recipes
+
+    fun setRecipes(newRecipes: List<RecipeItem>) {
+        Log.d("RecipeFlow", "HomeViewModel'a tarif geldi: ${newRecipes.map { it.name }}")
+        _recipes.value = newRecipes
+    }
+
+
     fun setFreeTextInputs(inputs: List<String>) {
         _freeTextInputs.value = inputs
     }
@@ -122,7 +133,7 @@ class HomeViewModel @Inject constructor(
     fun resetResultNavigation() { //detailscreenle ekledik
         _navigateToResult.value = false
 
-        // 👇 Ana sayfaya dönünce kullanıcı onayladığı liste gösterilsin
+        //Ana sayfaya dönünce kullanıcı onayladığı liste görüncek
         _categorizedItems.value = _userEditedItems.value
     }
 
