@@ -2,6 +2,7 @@ package com.farukayata.yemektarifi.data.remote.repository
 
 import android.util.Log
 import com.farukayata.yemektarifi.data.remote.OpenAiService
+import com.farukayata.yemektarifi.data.remote.model.NutritionalValues
 import com.farukayata.yemektarifi.data.remote.model.OpenAiResponse
 import com.farukayata.yemektarifi.data.remote.model.RecipeItem
 import com.farukayata.yemektarifi.domain.OpenAiRepository
@@ -139,6 +140,10 @@ class OpenAiRepositoryImpl @Inject constructor(
         - Kullanılan Malzemeler:
         - Eksik Malzemeler (eğer varsa, yoksa "Eksik yok" yaz):
         - Görsel Tanımı (DALL·E ile üretim için kullanılacak bir açıklama):
+        - Besin Değerleri (100g için):
+          * Karbonhidrat: (gram)
+          * Protein: (gram)
+          * Yağ: (gram)
         
         ❗️ Örnek format:
 
@@ -156,6 +161,10 @@ class OpenAiRepositoryImpl @Inject constructor(
         Kullanılan Malzemeler: Tavuk, Ananas, Marul
         Eksik Malzemeler: Yoğurt
         Görsel Tanımı: Ananas dilimleri ve tavuk parçaları ile hazırlanmış renkli bir salata
+        Besin Değerleri (100g için):
+        - Karbonhidrat: (50)
+        - Protein: (10)
+        - Yağ: (40)
 
         Tarif 2:
         ...
@@ -204,6 +213,17 @@ class OpenAiRepositoryImpl @Inject constructor(
             Log.d("RecipeDebug", "Açıklama alanı: $description")
             Log.d("RecipeDebug", "Açıklama alanı: $description")
 
+            // Besin değerlerini parse et
+            val carbsMatch = Regex("(?i)Karbonhidrat\\s*:\\s*(\\d+(?:\\.\\d+)?)").find(entry)
+            val proteinMatch = Regex("(?i)Protein\\s*:\\s*(\\d+(?:\\.\\d+)?)").find(entry)
+            val fatMatch = Regex("(?i)Yağ\\s*:\\s*(\\d+(?:\\.\\d+)?)").find(entry)
+
+            val nutritionalValues = NutritionalValues(
+                carbohydrates = carbsMatch?.groupValues?.get(1)?.toFloatOrNull() ?: 0f,
+                protein = proteinMatch?.groupValues?.get(1)?.toFloatOrNull() ?: 0f,
+                fat = fatMatch?.groupValues?.get(1)?.toFloatOrNull() ?: 0f
+            )
+
 
             recipes.add(
                 RecipeItem(
@@ -215,7 +235,8 @@ class OpenAiRepositoryImpl @Inject constructor(
                     ingredients = ingredients,
                     missingIngredients = missing,
                     ingredientDetails = ingredientDetails,
-                    summary = summary
+                    summary = summary,
+                    nutritionalValues = nutritionalValues
                 )
             )
         }

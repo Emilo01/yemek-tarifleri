@@ -20,6 +20,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.farukayata.yemektarifi.data.remote.model.RecipeItem
+import com.farukayata.yemektarifi.data.remote.ui.components.NutritionalChart.NutritionalChart
 import kotlin.math.min
 import kotlin.random.Random
 
@@ -234,6 +235,23 @@ fun RecipeDetailScreen(recipe: RecipeItem) {
                                 }
                         }
                     }
+                }
+            }
+
+            // Besin değerleri grafiği
+            item {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
+                ) {
+                    NutritionalChart(
+                        nutritionalValues = recipe.nutritionalValues,
+                        modifier = Modifier.padding(16.dp)
+                    )
                 }
             }
 
