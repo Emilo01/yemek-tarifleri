@@ -197,10 +197,32 @@ class OpenAiRepositoryImpl @Inject constructor(
             val duration = Regex("(?i)Süre\\s*:\\s*(.*)").find(entry)?.groupValues?.get(1)?.trim() ?: "-"
             val region = Regex("(?i)Bölge\\s*:\\s*(.*)").find(entry)?.groupValues?.get(1)?.trim() ?: "-"
             //val description = Regex("(?i)Açıklama\\s*:\\s*(.*?)(?=Kullanılan Malzemeler:)").find(entry)?.groupValues?.get(1)?.trim() ?: "-"
+
+            val description = Regex(
+                "(?i)Açıklama\\s*:\\s*(.*?)(?=Malzeme Kullanım Detayı:|Kullanılan Malzemeler:|Eksik Malzemeler:|Görsel Tanımı:|Besin Değerleri|$)",
+                RegexOption.DOT_MATCHES_ALL
+            ).find(entry)?.groupValues?.get(1)
+                ?.trim()
+                ?.removeSuffix("-")
+                ?.trim()
+                ?: "-"
+
+
+            /*
+            val description = Regex(
+                "(?i)Açıklama\\s*:\\s*(.*?)(?=Malzeme Kullanım Detayı:|Kullanılan Malzemeler:|Eksik Malzemeler:|Görsel Tanımı:|Besin Değerleri|$)",
+                RegexOption.DOT_MATCHES_ALL
+            ).find(entry)?.groupValues?.get(1)?.trim() ?: "-"
+
+             */
+
+            /*
             val description = Regex(
                 "(?i)Açıklama\\s*:\\s*(.*?)(?=Kullanılan Malzemeler:)",
                 RegexOption.DOT_MATCHES_ALL
             ).find(entry)?.groupValues?.get(1)?.trim() ?: "-"
+
+             */
 
             val ingredients = Regex("(?i)Kullanılan Malzemeler\\s*:\\s*(.*)").find(entry)?.groupValues?.get(1)
                 ?.split(",")?.map { it.trim() } ?: emptyList()
@@ -210,7 +232,6 @@ class OpenAiRepositoryImpl @Inject constructor(
             val imageDescription = Regex("(?i)Görsel Tanımı\\s*:\\s*(.*)").find(entry)?.groupValues?.get(1)?.trim() ?: ""
 
             Log.d("ParseRecipe", "Name: $name, Description: $description, Image: $imageDescription")//yaptığım parse işlemi sonrası chek etmek için
-            Log.d("RecipeDebug", "Açıklama alanı: $description")
             Log.d("RecipeDebug", "Açıklama alanı: $description")
 
             // Besin değerlerini parse et

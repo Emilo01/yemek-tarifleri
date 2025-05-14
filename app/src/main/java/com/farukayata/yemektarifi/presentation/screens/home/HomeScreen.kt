@@ -30,6 +30,7 @@ import com.farukayata.yemektarifi.data.remote.ui.components.LottieAnimationView
 import androidx.compose.ui.graphics.Color
 import androidx.navigation.NavController
 import com.farukayata.yemektarifi.data.remote.model.CategorizedItem
+import com.farukayata.yemektarifi.data.remote.ui.components.BottomNavigationBar
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -39,237 +40,247 @@ fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel(),
     navController: NavController
 ) {
-    val selectedImageUri by viewModel.selectedImageUri.collectAsState()
-    val selectedImageBase64 by viewModel.selectedImageBase64.collectAsState()
-    val detectedLabels by viewModel.detectedLabels.collectAsState()
-
-    val localizedObjects by viewModel.localizedObjects.collectAsState()
-    val openAiItems by viewModel.openAiItems.collectAsState()
-    val categorizedItems by viewModel.categorizedItems.collectAsState()
-
-    val userMessage by viewModel.userMessage.collectAsState()
-    val isLoading by viewModel.isLoading.collectAsState()
-
-    var showEditBottomSheet by remember { mutableStateOf(false) }
-
-
-    val context = LocalContext.current //-> contentresolver erişimi için lazım
-
-    val navigateToResult by viewModel.navigateToResult.collectAsState()
-
-    LaunchedEffect(navigateToResult) {
-        if (navigateToResult) {
-            navController.navigate("result")
+    Scaffold(
+        bottomBar = {
+            BottomNavigationBar(navController = navController)
         }
-    }
-
-    val launcher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri: Uri? ->
-        viewModel.setSelectedImage(uri)
-        viewModel.convertImageToBase64Compressed_2_1(uri, context.contentResolver)
-
-        /*-vision dan 4o ya geçince storrage yüklene fotoyu kaydetmeye gerrek kalmadı
-        uri?.let {
-            viewModel.uploadImageToFirebase(it)
-        }
-        */
-
-        Log.d(
-            "Base64Image",
-            "Base64: ${viewModel.selectedImageBase64.value}"
-        ) //base64 çevrilmiş hali görselin
-    }
-
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(16.dp)
-    ) {
+    ) { paddingValues ->
         Column(
-            modifier = Modifier.fillMaxSize()
+            modifier = modifier.padding(paddingValues)
         ) {
-            Button(
-                onClick = { launcher.launch("image/*") },
-                modifier = Modifier.fillMaxWidth()
+            val selectedImageUri by viewModel.selectedImageUri.collectAsState()
+            val selectedImageBase64 by viewModel.selectedImageBase64.collectAsState()
+            val detectedLabels by viewModel.detectedLabels.collectAsState()
+
+            val localizedObjects by viewModel.localizedObjects.collectAsState()
+            val openAiItems by viewModel.openAiItems.collectAsState()
+            val categorizedItems by viewModel.categorizedItems.collectAsState()
+
+            val userMessage by viewModel.userMessage.collectAsState()
+            val isLoading by viewModel.isLoading.collectAsState()
+
+            var showEditBottomSheet by remember { mutableStateOf(false) }
+
+
+            val context = LocalContext.current //-> contentresolver erişimi için lazım
+
+            val navigateToResult by viewModel.navigateToResult.collectAsState()
+
+            LaunchedEffect(navigateToResult) {
+                if (navigateToResult) {
+                    navController.navigate("result")
+                }
+            }
+
+            val launcher = rememberLauncherForActivityResult(
+                contract = ActivityResultContracts.GetContent()
+            ) { uri: Uri? ->
+                viewModel.setSelectedImage(uri)
+                viewModel.convertImageToBase64Compressed_2_1(uri, context.contentResolver)
+
+                /*-vision dan 4o ya geçince storrage yüklene fotoyu kaydetmeye gerrek kalmadı
+                uri?.let {
+                    viewModel.uploadImageToFirebase(it)
+                }
+                */
+
+                Log.d(
+                    "Base64Image",
+                    "Base64: ${viewModel.selectedImageBase64.value}"
+                ) //base64 çevrilmiş hali görselin
+            }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp)
             ) {
-                Text(text = "Fotoğraf Seç")
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            selectedImageUri?.let { uri ->
-                Image(
-                    painter = rememberAsyncImagePainter(uri),
-                    contentDescription = "Seçilen Fotoğraf",
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(300.dp)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            if (selectedImageBase64.orEmpty().isNotEmpty()) {
-                Button(
-                    onClick = { viewModel.detectLabels() },
-                    modifier = Modifier.fillMaxWidth()
+                Column(
+                    modifier = Modifier.fillMaxSize()
                 ) {
-                    Text(text = "Görseldeki Nesneleri Tespit Et (label Detection)")
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Button(
-                    onClick = { viewModel.analyzeWithOpenAi() },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(text = "OpenAI ile Analiz Et")
-                }
-
-                //popup
-                var showDialog by remember { mutableStateOf(false) }
-
-                LaunchedEffect(userMessage) {
-                    if (!userMessage.isNullOrEmpty()) {
-                        showDialog = true
+                    Button(
+                        onClick = { launcher.launch("image/*") },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(text = "Fotoğraf Seç")
                     }
-                }
 
-                if (showDialog) {
-                    userMessage?.let { message ->
-                        AlertDialog(
-                            onDismissRequest = {
-                                showDialog = false
-                                viewModel.clearUserMessage()
-                            },
-                            confirmButton = {
-                                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                                    Button(
-                                        onClick = {
-                                            showDialog = false
-                                            viewModel.clearUserMessage()
-                                        }
-                                    ) {
-                                        Text("Tamam")
-                                    }
-                                }
-                            },
-                            text = {
-                                Column(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(8.dp),
-                                    horizontalAlignment = Alignment.CenterHorizontally
-                                ) {
-                                    Text(
-                                        text = "Uyarı",
-                                        color = Color(0xFFEF5350),
-                                        style = MaterialTheme.typography.titleLarge
-                                    )
+                    Spacer(modifier = Modifier.height(16.dp))
 
-                                    Spacer(modifier = Modifier.height(8.dp))
-
-                                    Text(
-                                        text = message,
-                                        style = MaterialTheme.typography.bodyMedium
-                                    )
-
-                                    Spacer(modifier = Modifier.height(8.dp))
-
-                                    LottieAnimationView()
-                                }
-                            }
+                    selectedImageUri?.let { uri ->
+                        Image(
+                            painter = rememberAsyncImagePainter(uri),
+                            contentDescription = "Seçilen Fotoğraf",
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(300.dp)
                         )
                     }
-                }
-            }
 
-            Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
 
-            LazyColumn {
-                items(detectedLabels) { label ->
-                    Text(text = "${label.description} (${(label.score * 100).toInt()}%)")
-                    Spacer(modifier = Modifier.height(4.dp))
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            val categoryOrder = listOf(
-                "Et ve Et Ürünleri",
-                "Balık ve Deniz Ürünleri",
-                "Yumurta ve Süt Ürünleri",
-                "Tahıllar ve Unlu Mamuller",
-                "Baklagiller",
-                "Sebzeler",
-                "Meyveler",
-                "Baharatlar ve Tat Vericiler",
-                "Yağlar ve Sıvılar",
-                "Konserve ve Hazır Gıdalar",
-                "Tatlı Malzemeleri ve Kuruyemişler"
-            )
-
-            val grouped = categorizedItems.groupBy { it.category }
-            val sortedGroups = categoryOrder.mapNotNull { key -> grouped[key]?.let { key to it } }
-
-            if (categorizedItems.isNotEmpty()) {
-                Button(
-                    onClick = { showEditBottomSheet = true },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 16.dp)
-                ) {
-                    Text("Ürünleri Onayla / Düzenle")
-                }
-            }
-
-            if (showEditBottomSheet) {
-                ModalBottomSheet(onDismissRequest = { showEditBottomSheet = false }) {
-                    EditItemsBottomSheet(
-                        initialItems = categorizedItems,
-                        onFinalize = { finalList: List<CategorizedItem>, newInputs: List<String> ->
-                            viewModel.setUserEditedItems(finalList)
-
-                            viewModel.setFreeTextInputs(newInputs) // ➕ bunu yeni ekleyeceğiz
-                            viewModel.triggerResultNavigation()
-
-                            //viewModel.reAnalyzeWithEditedItems(finalList)
-                            //viewModel.reAnalyzeWithFreeTextList(finalList,newInputs)
-                            //viewModel.triggerResultNavigation()//resourchscreen sayfasına geçiş için  -- viewmodelde withconntext e taşıdık stateden önce listein gücellemesi içi
-                            showEditBottomSheet = false
+                    if (selectedImageBase64.orEmpty().isNotEmpty()) {
+                        Button(
+                            onClick = { viewModel.detectLabels() },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(text = "Görseldeki Nesneleri Tespit Et (label Detection)")
                         }
-                    )
-                }
-            }
 
+                        Spacer(modifier = Modifier.height(8.dp))
 
+                        Button(
+                            onClick = { viewModel.analyzeWithOpenAi() },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(text = "OpenAI ile Analiz Et")
+                        }
 
-            //Fade-in animasyon ve loading göstergesi
-            if (isLoading) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    //CircularProgressIndicator() lottie ekledik
-                    LoadingAnimation(
-                        modifier = Modifier.size(150.dp)
-                    )
-                }
-            } else {
-                AnimatedVisibility(
-                    visible = categorizedItems.isNotEmpty(),
-                    enter = fadeIn(animationSpec = tween(500))
-                ) {
-                    LazyColumn {
-                        sortedGroups.forEach { (category, items) ->
-                            item {
-                                CategoryCard(
-                                    categoryName = category,
-                                    items = items
+                        //popup
+                        var showDialog by remember { mutableStateOf(false) }
+
+                        LaunchedEffect(userMessage) {
+                            if (!userMessage.isNullOrEmpty()) {
+                                showDialog = true
+                            }
+                        }
+
+                        if (showDialog) {
+                            userMessage?.let { message ->
+                                AlertDialog(
+                                    onDismissRequest = {
+                                        showDialog = false
+                                        viewModel.clearUserMessage()
+                                    },
+                                    confirmButton = {
+                                        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                                            Button(
+                                                onClick = {
+                                                    showDialog = false
+                                                    viewModel.clearUserMessage()
+                                                }
+                                            ) {
+                                                Text("Tamam")
+                                            }
+                                        }
+                                    },
+                                    text = {
+                                        Column(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(8.dp),
+                                            horizontalAlignment = Alignment.CenterHorizontally
+                                        ) {
+                                            Text(
+                                                text = "Uyarı",
+                                                color = Color(0xFFEF5350),
+                                                style = MaterialTheme.typography.titleLarge
+                                            )
+
+                                            Spacer(modifier = Modifier.height(8.dp))
+
+                                            Text(
+                                                text = message,
+                                                style = MaterialTheme.typography.bodyMedium
+                                            )
+
+                                            Spacer(modifier = Modifier.height(8.dp))
+
+                                            LottieAnimationView()
+                                        }
+                                    }
                                 )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    LazyColumn {
+                        items(detectedLabels) { label ->
+                            Text(text = "${label.description} (${(label.score * 100).toInt()}%)")
+                            Spacer(modifier = Modifier.height(4.dp))
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    val categoryOrder = listOf(
+                        "Et ve Et Ürünleri",
+                        "Balık ve Deniz Ürünleri",
+                        "Yumurta ve Süt Ürünleri",
+                        "Tahıllar ve Unlu Mamuller",
+                        "Baklagiller",
+                        "Sebzeler",
+                        "Meyveler",
+                        "Baharatlar ve Tat Vericiler",
+                        "Yağlar ve Sıvılar",
+                        "Konserve ve Hazır Gıdalar",
+                        "Tatlı Malzemeleri ve Kuruyemişler"
+                    )
+
+                    val grouped = categorizedItems.groupBy { it.category }
+                    val sortedGroups = categoryOrder.mapNotNull { key -> grouped[key]?.let { key to it } }
+
+                    if (categorizedItems.isNotEmpty()) {
+                        Button(
+                            onClick = { showEditBottomSheet = true },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 16.dp)
+                        ) {
+                            Text("Ürünleri Onayla / Düzenle")
+                        }
+                    }
+
+                    if (showEditBottomSheet) {
+                        ModalBottomSheet(onDismissRequest = { showEditBottomSheet = false }) {
+                            EditItemsBottomSheet(
+                                initialItems = categorizedItems,
+                                onFinalize = { finalList: List<CategorizedItem>, newInputs: List<String> ->
+                                    viewModel.setUserEditedItems(finalList)
+
+                                    viewModel.setFreeTextInputs(newInputs) // bunu yeni ekleyeceğiz
+                                    viewModel.triggerResultNavigation()
+
+                                    //viewModel.reAnalyzeWithEditedItems(finalList)
+                                    //viewModel.reAnalyzeWithFreeTextList(finalList,newInputs)
+                                    //viewModel.triggerResultNavigation()//resourchscreen sayfasına geçiş için  -- viewmodelde withconntext e taşıdık stateden önce listein gücellemesi içi
+                                    showEditBottomSheet = false
+                                }
+                            )
+                        }
+                    }
+
+
+
+                    //Fade-in animasyon ve loading göstergesi
+                    if (isLoading) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            //CircularProgressIndicator() lottie ekledik
+                            LoadingAnimation(
+                                modifier = Modifier.size(150.dp)
+                            )
+                        }
+                    } else {
+                        AnimatedVisibility(
+                            visible = categorizedItems.isNotEmpty(),
+                            enter = fadeIn(animationSpec = tween(500))
+                        ) {
+                            LazyColumn {
+                                sortedGroups.forEach { (category, items) ->
+                                    item {
+                                        CategoryCard(
+                                            categoryName = category,
+                                            items = items
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
