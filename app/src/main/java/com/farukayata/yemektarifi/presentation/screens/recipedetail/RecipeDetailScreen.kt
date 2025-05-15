@@ -1,5 +1,6 @@
 package com.farukayata.yemektarifi.presentation.screens.recipedetail
 
+import android.util.Log
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -35,7 +36,7 @@ fun RecipeDetailScreen(
     var showSnackbar by remember { mutableStateOf(false) }
     var snackbarMessage by remember { mutableStateOf("") }
 
-    // Scroll yönünü algılamak için
+    // Scroll yönününü öğrendik
     var lastScrollOffset by remember { mutableStateOf(0) }
     var scrollDirection by remember { mutableStateOf("down") }
     LaunchedEffect(scrollState.firstVisibleItemScrollOffset) {
@@ -48,7 +49,7 @@ fun RecipeDetailScreen(
     val showToolbar = scrollState.firstVisibleItemScrollOffset > 80
     val toolbarColor = MaterialTheme.colorScheme.primary
 
-    // Favori durumunu kontrol et
+    //fav durumuu kontrol ettik
     LaunchedEffect(recipe.name) {
         userRepository.getFavoriteRecipesFromSubcollection(currentUserId).onSuccess { favorites ->
             isFavorite = favorites.any { it.name == recipe.name }
@@ -311,6 +312,8 @@ fun RecipeDetailScreen(
                                         isFavorite = true
                                         snackbarMessage = "Tarif favorilere eklendi"
                                         showSnackbar = true
+                                        Log.d("Firestore", "Kullanıcı favorilere eklendi")
+                                        Log.d("Firestore", "Admin koleksiyonuna eklendi")
                                     } else {
                                         snackbarMessage = "Görsel yüklenemedi: ${result.exceptionOrNull()?.localizedMessage}"
                                         showSnackbar = true
