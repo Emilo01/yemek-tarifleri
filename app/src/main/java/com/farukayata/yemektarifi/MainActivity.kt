@@ -27,10 +27,28 @@ import com.farukayata.yemektarifi.presentation.screens.recipesuggest.RecipeSugge
 import com.farukayata.yemektarifi.presentation.screens.recipesuggestion.RecipeSuggestionViewModel
 import com.farukayata.yemektarifi.presentation.screens.result.ResultScreen
 import com.farukayata.yemektarifi.presentation.screens.singup.SignUpScreen
+import com.farukayata.yemektarifi.data.remote.UserRepository
+import com.farukayata.yemektarifi.data.remote.AuthRepository
+import javax.inject.Inject
 import java.net.URLDecoder
+import java.nio.charset.StandardCharsets
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import com.farukayata.yemektarifi.data.remote.model.RecipeItem
+import com.farukayata.yemektarifi.presentation.screens.favorites.FavoritesScreen
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+    @Inject
+    lateinit var userRepository: UserRepository
+
+    @Inject
+    lateinit var authRepository: AuthRepository
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -119,18 +137,53 @@ class MainActivity : ComponentActivity() {
                         route = "recipeDetail/{recipeName}",
                         arguments = listOf(navArgument("recipeName") { type = NavType.StringType })
                     ) { backStackEntry ->
-                        val recipeName = URLDecoder.decode(backStackEntry.arguments?.getString("recipeName") ?: "", "UTF-8")
-                        Log.d("RecipeFlow", "Detay ekranı açıldı, gelen ad: $recipeName")
-                        val recipeList = viewModel.recipes.collectAsState().value
-                        Log.d("RecipeFlow", "HomeViewModel'daki tarif listesi: ${recipeList.map { it.name }}")
-                        val recipe = recipeList.find { it.name == recipeName }
-                        Log.d("RecipeFlow", "Eşleşen tarif: ${recipe?.name}")
+                        val encodedName = backStackEntry.arguments?.getString("recipeName") ?: ""
+                        val recipeName = URLDecoder.decode(encodedName, StandardCharsets.UTF_8.toString())
+                        val homeRecipes = viewModel.recipes.collectAsState().value
+                        val userId = authRepository.currentUser?.uid ?: ""
+                        var recipe by remember { mutableStateOf<RecipeItem?>(null) }
+                        var isLoading by remember { mutableStateOf(true) }
 
-                        if (recipe != null) {
-                            RecipeDetailScreen(recipe = recipe)
-                        } else {
-                            Text("Tarif bulunamadı: $recipeName")
+                        LaunchedEffect(recipeName, userId) {
+                            val homeRecipe = homeRecipes.find { it.name == recipeName }
+                            if (homeRecipe != null) {
+                                recipe = homeRecipe
+                                isLoading = false
+                            } else if (userId.isNotBlank()) {
+                                val result = userRepository.getFavoriteRecipesFromSubcollection(userId)
+                                result.onSuccess { favs ->
+                                    recipe = favs.find { it.name == recipeName }
+                                }
+                                isLoading = false
+                            } else {
+                                isLoading = false
+                            }
                         }
+
+                        when {
+                            isLoading -> {
+                                CircularProgressIndicator()
+                            }
+                            recipe != null -> {
+                                RecipeDetailScreen(
+                                    recipe = recipe!!,
+                                    userRepository = userRepository,
+                                    currentUserId = userId,
+                                    onBack = { navController.popBackStack() }
+                                )
+                            }
+                            else -> {
+                                Text("Tarif bulunamadı.")
+                            }
+                        }
+                    }
+
+                    composable("favorites") {
+                        FavoritesScreen(
+                            userRepository = userRepository,
+                            currentUserId = authRepository.currentUser?.uid ?: "",
+                            navController = navController
+                        )
                     }
                 }
             }

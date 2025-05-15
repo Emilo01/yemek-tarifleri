@@ -1,22 +1,22 @@
 package com.farukayata.yemektarifi.data.remote.model
 
 data class RecipeItem(
-    val name: String,
-    val imageUrl: String,
-    val duration: String,
-    val region: String,
-    val description: String,
-    val ingredients: List<String>, //-> malzeme listesi
-    val missingIngredients: List<String> = emptyList(), //eksik ürü için
+    val name: String ="",
+    val imageUrl: String ="",
+    val duration: String ="",
+    val region: String ="",
+    val description: String ="",
+    val ingredients: List<String> = emptyList(),//malzeme liste
+    val missingIngredients: List<String> = emptyList(),
     val ingredientDetails: String = "",
     val summary: String = "",
     val nutritionalValues: NutritionalValues = NutritionalValues()
 )
 
 data class NutritionalValues(
-    val carbohydrates: Float = 0f,  // gram cinsinden
-    val protein: Float = 0f,         // gram cinsinden
-    val fat: Float = 0f              // gram cinsinden
+    val carbohydrates: Float = 0f,
+    val protein: Float = 0f,
+    val fat: Float = 0f
 ) {
     fun getPercentages(): Triple<Float, Float, Float> {
         val total = carbohydrates + protein + fat

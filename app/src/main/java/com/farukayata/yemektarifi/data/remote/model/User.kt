@@ -6,5 +6,6 @@ data class User(
     val surname: String = "",
     val email: String = "",
     val gender: String = "",
-    val age: Int = 0
+    val age: Int = 0,
+    val favoriteRecipes: List<String> = emptyList()
 )

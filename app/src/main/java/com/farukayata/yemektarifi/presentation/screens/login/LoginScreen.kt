@@ -1,5 +1,6 @@
 package com.farukayata.yemektarifi.presentation.screens.login
 
+import android.util.Log
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -9,6 +10,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.farukayata.yemektarifi.viewmodel.AuthViewModel
+import com.google.firebase.auth.FirebaseAuth
 
 @Composable
 fun LoginScreen(
@@ -18,6 +20,8 @@ fun LoginScreen(
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+
+    Log.d("Auth", "Login başarılı: UID = ${FirebaseAuth.getInstance().currentUser?.uid}")
 
     Column(
         modifier = Modifier

@@ -1,14 +1,10 @@
 package com.farukayata.yemektarifi.presentation.screens.recipedetail
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -19,16 +15,25 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import com.farukayata.yemektarifi.data.remote.UserRepository
 import com.farukayata.yemektarifi.data.remote.model.RecipeItem
 import com.farukayata.yemektarifi.data.remote.ui.components.NutritionalChart.NutritionalChart
-import kotlin.math.min
-import kotlin.random.Random
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RecipeDetailScreen(recipe: RecipeItem) {
+fun RecipeDetailScreen(
+    recipe: RecipeItem,
+    userRepository: UserRepository,
+    currentUserId: String,
+    onBack: () -> Unit
+) {
     val scrollState = rememberLazyListState()
     val imageHeight = 300.dp
+    val scope = rememberCoroutineScope()
+    var isFavorite by remember { mutableStateOf(false) }
+    var showSnackbar by remember { mutableStateOf(false) }
+    var snackbarMessage by remember { mutableStateOf("") }
 
     // Scroll yönünü algılamak için
     var lastScrollOffset by remember { mutableStateOf(0) }
@@ -43,27 +48,23 @@ fun RecipeDetailScreen(recipe: RecipeItem) {
     val showToolbar = scrollState.firstVisibleItemScrollOffset > 80
     val toolbarColor = MaterialTheme.colorScheme.primary
 
+    // Favori durumunu kontrol et
+    LaunchedEffect(recipe.name) {
+        userRepository.getFavoriteRecipesFromSubcollection(currentUserId).onSuccess { favorites ->
+            isFavorite = favorites.any { it.name == recipe.name }
+        }
+    }
+
     Scaffold(
         topBar = {
-            AnimatedVisibility(
-                visible = showToolbar,
-                enter = fadeIn(),
-                exit = fadeOut()
-            ) {
-                TopAppBar(
-                    title = {
-                        Text(
-                            text = recipe.name,
-                            style = MaterialTheme.typography.titleLarge,
-                            color = MaterialTheme.colorScheme.onPrimary
-                        )
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = toolbarColor,
-                        titleContentColor = MaterialTheme.colorScheme.onPrimary
-                    )
-                )
-            }
+            TopAppBar(
+                title = { Text(recipe.name) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Geri")
+                    }
+                }
+            )
         }
     ) { paddingValues ->
         LazyColumn(
@@ -92,7 +93,6 @@ fun RecipeDetailScreen(recipe: RecipeItem) {
                         color = Color.Black
                     ) {}
 
-                    // Tarif adı overlay
                     Surface(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -116,7 +116,6 @@ fun RecipeDetailScreen(recipe: RecipeItem) {
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceEvenly
                             ) {
-                                // Bölge bilgisi
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(4.dp)
@@ -132,7 +131,6 @@ fun RecipeDetailScreen(recipe: RecipeItem) {
                                     )
                                 }
 
-                                // Süre bilgisi
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(4.dp)
@@ -238,7 +236,6 @@ fun RecipeDetailScreen(recipe: RecipeItem) {
                 }
             }
 
-            // Besin değerleri grafiği
             item {
                 Card(
                     modifier = Modifier
@@ -299,14 +296,51 @@ fun RecipeDetailScreen(recipe: RecipeItem) {
                         Text("📝 Alışveriş Listesi")
                     }
                     Button(
-                        onClick = {},
+                        onClick = {
+                            scope.launch {
+                                if (isFavorite) {
+                                    userRepository.removeFavoriteRecipeFromSubcollection(currentUserId, recipe.name)
+                                        .onSuccess {
+                                            isFavorite = false
+                                            snackbarMessage = "Tarif favorilerden çıkarıldı"
+                                            showSnackbar = true
+                                        }
+                                } else {
+                                    val result = userRepository.addFavoriteRecipeWithImage(currentUserId, recipe)
+                                    if (result.isSuccess) {
+                                        isFavorite = true
+                                        snackbarMessage = "Tarif favorilere eklendi"
+                                        showSnackbar = true
+                                    } else {
+                                        snackbarMessage = "Görsel yüklenemedi: ${result.exceptionOrNull()?.localizedMessage}"
+                                        showSnackbar = true
+                                    }
+                                }
+                            }
+                        },
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.secondary
+                            containerColor = if (isFavorite)
+                                MaterialTheme.colorScheme.error
+                            else
+                                MaterialTheme.colorScheme.secondary
                         )
                     ) {
-                        Text("❤️ Fav")
+                        Text(if (isFavorite) "❤️ Favorilerden Çıkar" else "🤍 Favorilere Ekle")
                     }
                 }
+            }
+        }
+
+        if (showSnackbar) {
+            Snackbar(
+                modifier = Modifier.padding(16.dp),
+                action = {
+                    TextButton(onClick = { showSnackbar = false }) {
+                        Text("Tamam")
+                    }
+                }
+            ) {
+                Text(snackbarMessage)
             }
         }
     }
