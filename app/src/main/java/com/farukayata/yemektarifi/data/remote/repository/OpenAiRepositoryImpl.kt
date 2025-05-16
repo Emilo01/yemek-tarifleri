@@ -193,9 +193,9 @@ class OpenAiRepositoryImpl @Inject constructor(
 
             Log.d("ParseRecipe", "Entry: $entry") //tarif bloğum için
 
-            val name = Regex("(?i)Tarif Adı\\s*:\\s*(.*)").find(entry)?.groupValues?.get(1)?.trim() ?: "Bilinmeyen"
-            val duration = Regex("(?i)Süre\\s*:\\s*(.*)").find(entry)?.groupValues?.get(1)?.trim() ?: "-"
-            val region = Regex("(?i)Bölge\\s*:\\s*(.*)").find(entry)?.groupValues?.get(1)?.trim() ?: "-"
+            val name = Regex("(?i)Tarif Adı\\s*:\\s*(.*)").find(entry)?.groupValues?.getOrNull(1)?.trim() ?: "Bilinmeyen"
+            val duration = Regex("(?i)Süre\\s*:\\s*(.*)").find(entry)?.groupValues?.getOrNull(1)?.trim() ?: "-"
+            val region = Regex("(?i)Bölge\\s*:\\s*(.*)").find(entry)?.groupValues?.getOrNull(1)?.trim() ?: "-"
             //val description = Regex("(?i)Açıklama\\s*:\\s*(.*?)(?=Kullanılan Malzemeler:)").find(entry)?.groupValues?.get(1)?.trim() ?: "-"
 
             val description = Regex(
@@ -207,22 +207,6 @@ class OpenAiRepositoryImpl @Inject constructor(
                 ?.trim()
                 ?: "-"
 
-
-            /*
-            val description = Regex(
-                "(?i)Açıklama\\s*:\\s*(.*?)(?=Malzeme Kullanım Detayı:|Kullanılan Malzemeler:|Eksik Malzemeler:|Görsel Tanımı:|Besin Değerleri|$)",
-                RegexOption.DOT_MATCHES_ALL
-            ).find(entry)?.groupValues?.get(1)?.trim() ?: "-"
-
-             */
-
-            /*
-            val description = Regex(
-                "(?i)Açıklama\\s*:\\s*(.*?)(?=Kullanılan Malzemeler:)",
-                RegexOption.DOT_MATCHES_ALL
-            ).find(entry)?.groupValues?.get(1)?.trim() ?: "-"
-
-             */
 
             val ingredients = Regex("(?i)Kullanılan Malzemeler\\s*:\\s*(.*)").find(entry)?.groupValues?.get(1)
                 ?.split(",")?.map { it.trim() } ?: emptyList()
