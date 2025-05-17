@@ -51,6 +51,7 @@ fun MealTypeScreen(navController: NavController) {
             MealTypeCard(
                 mealType = meal,
                 onClick = {
+                    homeViewModel.clearCache()
                     homeViewModel.setMealType(meal.title)
                     val editedItems = homeViewModel.userEditedItems.value
                     navController.currentBackStackEntry?.savedStateHandle?.set("editedItems", editedItems)

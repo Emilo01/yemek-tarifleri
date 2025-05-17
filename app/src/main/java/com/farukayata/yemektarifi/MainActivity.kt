@@ -169,7 +169,9 @@ class MainActivity : ComponentActivity() {
                                     recipe = recipe!!,
                                     userRepository = userRepository,
                                     currentUserId = userId,
-                                    onBack = { navController.popBackStack() }
+                                    onBack = {
+                                        navController.popBackStack()
+                                    }
                                 )
                             }
                             else -> {

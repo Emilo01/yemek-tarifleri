@@ -12,6 +12,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
+import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.airbnb.lottie.compose.LottieAnimation
 import com.airbnb.lottie.compose.LottieCompositionSpec
@@ -32,38 +33,22 @@ fun RecipeSuggestionScreen(
     navController: NavHostController,
     homeViewModel: HomeViewModel
 ) {
-
-    //val homeViewModel = hiltViewModel<HomeViewModel>()
-
-    //Yalnızca bir kez çalışsın diye mealType ve items hash'ine bağlı LaunchedEffect
-    //LaunchedEffect(mealType, items) { //ofak bir geliştirme yeniden tetiklenme adına
-    /*
-    LaunchedEffect(mealType, items.map { it.name }) {
-        viewModel.generateRecipes(mealType, items)
-        //bu kısımı if yapısı içinne almak lazım ;if (recipes.isEmpty())
-    }
-
-     */
-
-    /*
-    LaunchedEffect(mealType, items.map { it.name }) {
-        viewModel.generateRecipes(mealType, items) { generatedRecipes ->
-            homeViewModel.setRecipes(generatedRecipes)
-        }
-    }
-     */
-
-    LaunchedEffect(mealType, items.map { it.name }) {
-        Log.d("RecipeFlow", "generateRecipes çağrıldı: $mealType / items=${items.map { it.name }}")
-        viewModel.generateRecipes(mealType, items) { recipes ->
-            Log.d("RecipeFlow", "Tarifler set ediliyor: ${recipes.map { it.name }}")
-            //homeViewModel.setRecipes(recipes)
-            homeViewModel.setRecipes(recipes)
-        }
-    }
-
     val isLoading by viewModel.isLoading.collectAsState()
     val recipes by viewModel.recipes.collectAsState()
+
+    LaunchedEffect(mealType, items.map { it.name }) {
+        // Eğer cachede tarifler varsa onları kullancaz
+        if (homeViewModel.recipes.value.isEmpty()) {
+            Log.d("RecipeFlow", "generateRecipes çağrıldı: $mealType / items=${items.map { it.name }}")
+            viewModel.generateRecipes(mealType, items) { recipes ->
+                Log.d("RecipeFlow", "Tarifler set ediliyor: ${recipes.map { it.name }}")
+                homeViewModel.setRecipes(recipes)
+            }
+        } else {
+            // Cachedeki tarifleri kullandık
+            homeViewModel.loadCachedRecipes()
+        }
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         when {
@@ -80,7 +65,6 @@ fun RecipeSuggestionScreen(
                 }
             }
 
-
             recipes.isEmpty() -> {
                 Text(
                     text = "Henüz tarif oluşturulmadı.",
@@ -94,20 +78,12 @@ fun RecipeSuggestionScreen(
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    /*
-                    items(recipes) { recipe ->
-                        RecipeCard(recipe = recipe, onClick = {
-                            navController.navigate("recipeDetail/${recipe.name}")
-                        })
-                    }
-                    */
                     items(recipes) { recipe ->
                         val encodedName = URLEncoder.encode(recipe.name, StandardCharsets.UTF_8.toString())
                         RecipeCard(recipe = recipe, onClick = {
                             navController.navigate("recipeDetail/$encodedName")
                         })
                     }
-
                 }
             }
         }
@@ -150,7 +126,6 @@ fun RecipeCard(recipe: RecipeItem,onClick: () -> Unit) {
                 Spacer(modifier = Modifier.height(4.dp))
             }
 
-            //Text(text = "Eksik Ürünler: ${if (recipe.missingIngredients.isEmpty()) "Eksik ürün yok ✅" else recipe.missingIngredients.joinToString(", ").replace("**", "")}")
 
             if (recipe.missingIngredients.isEmpty()) {
                 Text(text = "Eksik ürün yok ✅")

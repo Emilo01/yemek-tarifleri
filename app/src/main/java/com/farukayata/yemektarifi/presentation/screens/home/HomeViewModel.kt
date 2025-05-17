@@ -77,18 +77,32 @@ class HomeViewModel @Inject constructor(
     private val _selectedMealType = MutableStateFlow("")
     val selectedMealType: StateFlow<String> = _selectedMealType
 
+    private val _recipes = MutableStateFlow<List<RecipeItem>>(emptyList())
+    val recipes: StateFlow<List<RecipeItem>> = _recipes
+
+    // Cache için yeni state
+    private var cachedRecipes: List<RecipeItem>? = null
+
     fun setSelectedMealType(type: String) {
         _selectedMealType.value = type
     }
 
-    private val _recipes = MutableStateFlow<List<RecipeItem>>(emptyList())
-    val recipes: StateFlow<List<RecipeItem>> = _recipes
-
     fun setRecipes(newRecipes: List<RecipeItem>) {
         Log.d("RecipeFlow", "HomeViewModel'a tarif geldi: ${newRecipes.map { it.name }}")
         _recipes.value = newRecipes
+        // Yeni tarifleri cache'e kaydet
+        cachedRecipes = newRecipes
     }
 
+    // Cacheden tarifleri yüklicez
+    fun loadCachedRecipes() {
+        cachedRecipes?.let {
+            _recipes.value = it
+        }
+    }
+    fun clearCache() {
+        cachedRecipes = null
+    }
 
     fun setFreeTextInputs(inputs: List<String>) {
         _freeTextInputs.value = inputs
@@ -114,11 +128,6 @@ class HomeViewModel @Inject constructor(
 
         reAnalyzeWithFreeTextList(currentItems, inputs)
     }
-
-
-
-
-
 
 
 
@@ -304,7 +313,6 @@ class HomeViewModel @Inject constructor(
                 .filter { it.isNotBlank() }
                 .joinToString("\n") { "${it.trim()}" }
 
-            // OpenAI için güçlü ve net bir prompt
             val fullPrompt = """
             Aşağıda yemek yapımında kullanılabilecek bazı ürünler verilmiştir. 
             Bunları analiz et ve sadece yenilebilir, yemek yapımında kullanılan ürünleri aşağıdaki gibi formatla:
