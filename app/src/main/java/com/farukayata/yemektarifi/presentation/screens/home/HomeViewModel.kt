@@ -12,6 +12,7 @@ import androidx.lifecycle.viewModelScope
 import com.farukayata.yemektarifi.BuildConfig
 import com.farukayata.yemektarifi.data.remote.OpenAiService
 import com.farukayata.yemektarifi.data.remote.StorageRepository
+import com.farukayata.yemektarifi.data.remote.UserRepository
 import com.farukayata.yemektarifi.data.remote.VisionApiService
 import com.farukayata.yemektarifi.data.remote.model.CategorizedItem
 import com.farukayata.yemektarifi.data.remote.model.RecipeItem
@@ -34,7 +35,8 @@ class HomeViewModel @Inject constructor(
     private val visionApiService: VisionApiService,
     //VisionApiServiceı constructor parametresi olarak aldık
     private val storageRepository: StorageRepository,
-    private val openAiService: OpenAiService
+    private val openAiService: OpenAiService,
+    private val userRepository: UserRepository
 ) : ViewModel() {
 
     private val _selectedImageUri = MutableStateFlow<Uri?>(null)
@@ -82,6 +84,9 @@ class HomeViewModel @Inject constructor(
 
     // Cache için yeni state
     private var cachedRecipes: List<RecipeItem>? = null
+
+    private val _popularRecipes = MutableStateFlow<List<RecipeItem>>(emptyList())
+    val popularRecipes: StateFlow<List<RecipeItem>> = _popularRecipes
 
     fun setSelectedMealType(type: String) {
         _selectedMealType.value = type
@@ -451,6 +456,18 @@ class HomeViewModel @Inject constructor(
             } catch (e: Exception) {
                 e.printStackTrace()
                 Log.e("VisionAPI", "Hata oluştu: ${e.message}")
+            }
+        }
+    }
+
+    fun fetchPopularRecipes() {
+        viewModelScope.launch {
+            // Firestore'dan admin kullanıcısının favori tariflerini çek
+            val adminId = "iiinsswnIob4JP0T8AqptPtBc3F2" // Firestore'daki admin id'si
+            val result = userRepository.getFavoriteRecipesFromSubcollection(adminId)
+            result.onSuccess { favs ->
+                // Rastgele 4 tarif seç
+                _popularRecipes.value = favs.shuffled().take(4)
             }
         }
     }
