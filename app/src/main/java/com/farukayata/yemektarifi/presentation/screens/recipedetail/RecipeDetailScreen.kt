@@ -35,6 +35,7 @@ fun RecipeDetailScreen(
     var isFavorite by remember { mutableStateOf(false) }
     var showSnackbar by remember { mutableStateOf(false) }
     var snackbarMessage by remember { mutableStateOf("") }
+    var isFavoriteLoading by remember { mutableStateOf(false) }
 
     // Scroll yönününü öğrendik
     var lastScrollOffset by remember { mutableStateOf(0) }
@@ -300,13 +301,16 @@ fun RecipeDetailScreen(
                         onClick = {
                             scope.launch {
                                 if (isFavorite) {
+                                    isFavoriteLoading = true
                                     userRepository.removeFavoriteRecipeFromSubcollection(currentUserId, recipe.name)
                                         .onSuccess {
                                             isFavorite = false
                                             snackbarMessage = "Tarif favorilerden çıkarıldı"
                                             showSnackbar = true
                                         }
+                                    isFavoriteLoading = false
                                 } else {
+                                    isFavoriteLoading = true
                                     val result = userRepository.addFavoriteRecipeWithImage(currentUserId, recipe)
                                     if (result.isSuccess) {
                                         isFavorite = true
@@ -318,9 +322,11 @@ fun RecipeDetailScreen(
                                         snackbarMessage = "Görsel yüklenemedi: ${result.exceptionOrNull()?.localizedMessage}"
                                         showSnackbar = true
                                     }
+                                    isFavoriteLoading = false
                                 }
                             }
                         },
+                        enabled = !isFavoriteLoading,
                         colors = ButtonDefaults.buttonColors(
                             containerColor = if (isFavorite)
                                 MaterialTheme.colorScheme.error
@@ -328,7 +334,14 @@ fun RecipeDetailScreen(
                                 MaterialTheme.colorScheme.secondary
                         )
                     ) {
-                        Text(if (isFavorite) "❤️ Favorilerden Çıkar" else "🤍 Favorilere Ekle")
+                        if (isFavoriteLoading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp),
+                                color = MaterialTheme.colorScheme.onSecondary
+                            )
+                        } else {
+                            Text(if (isFavorite) "❤️ Favorilerden Çıkar" else "🤍 Favorilere Ekle")
+                        }
                     }
                 }
             }
