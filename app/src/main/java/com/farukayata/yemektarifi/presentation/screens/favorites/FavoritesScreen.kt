@@ -20,6 +20,7 @@ import coil.compose.AsyncImage
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.material3.Text
 import com.farukayata.yemektarifi.data.remote.ui.components.BottomNavigationBar
+import com.farukayata.yemektarifi.data.remote.ui.components.LoadingAnimation
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
@@ -43,7 +44,7 @@ fun FavoritesScreen(
 
     if (isLoading) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator()
+            LoadingAnimation(modifier = Modifier.size(120.dp))
         }
     } else {
         Scaffold(

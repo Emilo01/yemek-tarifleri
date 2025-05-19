@@ -141,9 +141,9 @@ class OpenAiRepositoryImpl @Inject constructor(
         - Eksik Malzemeler (eğer varsa, yoksa "Eksik yok" yaz):
         - Görsel Tanımı (DALL·E ile üretim için kullanılacak bir açıklama):
         - Besin Değerleri (100g için):
-          * Karbonhidrat: (gram)
-          * Protein: (gram)
-          * Yağ: (gram)
+          - Karbonhidrat: (gram)
+          - Protein: (gram)
+          - Yağ: (gram)
         
         ❗️ Örnek format:
 
